@@ -915,6 +915,9 @@ void parseEnvironment()
         env["PIC_FLAG"] = "";
     }
 
+    version (OSX)
+        env["MACOSX_DEPLOYMENT_TARGET"] = "10.9";
+
     env.getDefault("GIT", "git");
     env.getDefault("GIT_HOME", "https://github.com/dlang");
     env.getDefault("SYSCONFDIR", "/etc");

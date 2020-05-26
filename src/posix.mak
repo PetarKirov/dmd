@@ -59,10 +59,6 @@ GENERATED = ../generated
 G = $(GENERATED)/$(OS)/$(BUILD)/$(MODEL)
 $(shell mkdir -p $G)
 
-ifeq (osx,$(OS))
-    export MACOSX_DEPLOYMENT_TARGET=10.9
-endif
-
 HOST_CXX?=c++
 # compatibility with old behavior
 ifneq ($(HOST_CC),)

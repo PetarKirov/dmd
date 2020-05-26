@@ -949,7 +949,7 @@ void parseEnvironment()
     if (env.getNumberedBool("AUTO_BOOTSTRAP"))
     {
         auto hostDMDVer = env.getDefault("HOST_DMD_VER", "2.088.0");
-        writefln("Using Bootstrap compiler: %s", hostDMDVer);
+        log("Using Bootstrap compiler: %s", hostDMDVer);
         auto hostDMDRoot = env["G"].buildPath("host_dmd-"~hostDMDVer);
         auto hostDMDBase = hostDMDVer~"."~os;
         auto hostDMDURL = "http://downloads.dlang.org/releases/2.x/"~hostDMDVer~"/dmd."~hostDMDBase;
@@ -959,7 +959,7 @@ void parseEnvironment()
         env["HOST_DMD_RUN"] = env["HOST_DMD"];
         if (!env["HOST_DMD"].exists)
         {
-            writefln("Downloading DMD %s", hostDMDVer);
+            log("Downloading DMD %s", hostDMDVer);
             auto curlFlags = "-fsSL --retry 5 --retry-max-time 120 --connect-timeout 5 --speed-time 30 --speed-limit 1024";
             hostDMDRoot.mkdirRecurse;
             ("curl " ~ curlFlags ~ " " ~ hostDMDURL~".tar.xz | tar -C "~hostDMDRoot~" -Jxf - || rm -rf "~hostDMDRoot).spawnShell.wait;
@@ -1780,8 +1780,9 @@ Params:
     spec = a format specifier
     args = the data to format to the log
 */
-auto log(T...)(string spec, T args)
+void log(T...)(string spec, T args)
 {
+    import std.stdio : writefln;
     if (verbose)
         writefln(spec, args);
 }
@@ -1879,7 +1880,7 @@ void installRelativeFiles(T)(string targetDir, string sourceBase, T files, uint 
     foreach (dirFilePair; filesByDir.byKeyValue)
     {
         const nextTargetDir = targetDir.buildPath(dirFilePair.key);
-        writefln("copy these files %s from '%s' to '%s'", dirFilePair.value, sourceBase, nextTargetDir);
+        log("copy these files %s from '%s' to '%s'", dirFilePair.value, sourceBase, nextTargetDir);
         mkdirRecurse(nextTargetDir);
         foreach (fileToCopy; dirFilePair.value)
         {

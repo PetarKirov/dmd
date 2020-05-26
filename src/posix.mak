@@ -99,7 +99,18 @@ else
   HOST_DMD_RUN=$(HOST_DMD) -conf=$(dir $(HOST_DMD))dmd.conf
 endif
 
-RUN_BUILD = $(GENERATED)/build HOST_DMD="$(HOST_DMD)" CXX="$(HOST_CXX)" OS=$(OS) BUILD=$(BUILD) MODEL=$(MODEL) AUTO_BOOTSTRAP="$(AUTO_BOOTSTRAP)" DOCDIR="$(DOCDIR)" STDDOC="$(STDDOC)" DOC_OUTPUT_DIR="$(DOC_OUTPUT_DIR)" MAKE="$(MAKE)" --called-from-make
+RUN_BUILD = $(GENERATED)/build \
+	    HOST_DMD="$(HOST_DMD)" \
+	    CXX="$(HOST_CXX)" \
+	    OS=$(OS) \
+	    BUILD=$(BUILD) \
+	    MODEL=$(MODEL) \
+	    AUTO_BOOTSTRAP="$(AUTO_BOOTSTRAP)" \
+	    DOCDIR="$(DOCDIR)" \
+	    STDDOC="$(STDDOC)" \
+	    DOC_OUTPUT_DIR="$(DOC_OUTPUT_DIR)" \
+	    MAKE="$(MAKE)" \
+	    --called-from-make
 
 ######## Begin build targets
 

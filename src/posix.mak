@@ -2,7 +2,7 @@
 # Important variables:
 # --------------------
 #
-# HOST_CXX:             Host C++ compiler to use (g++,clang++)
+# HOST_CXX:             C++ compiler to use (g++,clang++) for C++ frontend unittest
 # HOST_DMD:             Host D compiler to use for bootstrapping
 # AUTO_BOOTSTRAP:       Enable auto-boostrapping by downloading a stable DMD binary
 # INSTALL_DIR:          Installation folder to use
@@ -40,20 +40,6 @@
 
 # get OS and MODEL
 include osmodel.mak
-
-# Default to a release built, override with BUILD=debug
-ifeq (,$(BUILD))
-BUILD=release
-endif
-
-ifneq ($(BUILD),release)
-    ifneq ($(BUILD),debug)
-        $(error Unrecognized BUILD=$(BUILD), must be 'debug' or 'release')
-    endif
-endif
-
-INSTALL_DIR=../../install
-D = dmd
 
 GENERATED = ../generated
 G = $(GENERATED)/$(OS)/$(BUILD)/$(MODEL)
@@ -150,7 +136,6 @@ FORCE: ;
 # Generate the man pages
 ################################################################################
 
-DMD_MAN_PAGE = $(GENERATED)/docs/man/man1/dmd.1
 
 $(GENERATED)/docs/%: $(GENERATED)/build
 	$(RUN_BUILD) $@
@@ -160,7 +145,7 @@ man: $(GENERATED)/build
 
 ######################################################
 
-install: $(GENERATED)/build $(DMD_MAN_PAGE)
+install: $(GENERATED)/build
 	$(RUN_BUILD) $@
 
 ######################################################
@@ -201,22 +186,9 @@ $G/%: $(GENERATED)/build FORCE
 # DDoc documentation generation
 ################################################################################
 
-# BEGIN fallbacks for old variable names
-# should be removed after https://github.com/dlang/dlang.org/pull/1581
-# has been pulled
-DOCSRC=../dlang.org
-STDDOC=$(DOCFMT)
-DOC_OUTPUT_DIR=$(DOCDIR)
-# END fallbacks
-
-# DDoc html generation - this is very similar to the way the documentation for
-# Phobos is built
-ifneq ($(DOCSRC),)
 
 html: $(GENERATED)/build FORCE
 	$(RUN_BUILD) $@
-
-endif
 
 ######################################################
 

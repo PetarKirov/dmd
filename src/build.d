@@ -604,6 +604,7 @@ alias man = makeRule!((builder, rule) {
     builder
     .name("man")
     .description("Generate and prepare man files")
+    .msg("(CP) MAN")
     .deps([dmdMan].chain(
         "man1/dumpobj.1 man1/obj2asm.1 man5/dmd.conf.5".split
         .map!(e => methodInit!(BuildRule, (manFileBuilder, manFileRule) => manFileBuilder
@@ -611,7 +612,6 @@ alias man = makeRule!((builder, rule) {
             .sources([dmdRepo.buildPath("docs", "man", e)])
             .deps([directoryRule(manFileRule.target.dirName)])
             .commandFunction(() => copyAndTouch(manFileRule.sources[0], manFileRule.target))
-            .msg("copy '%s' to '%s'".format(manFileRule.sources[0], manFileRule.target))
         ))
     ).array);
 });
@@ -738,7 +738,8 @@ alias install = makeRule!((builder, rule) {
     builder
     .name("install")
     .description("Installs dmd into $(INSTALL)")
-    .deps([dmdDefault])
+    .deps([dmdDefault, man])
+    .msg("(CP) INSTALL")
     .sources(sourceFiles)
     .commandFunction(() {
         version (Windows)

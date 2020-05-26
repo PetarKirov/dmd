@@ -15,8 +15,9 @@ zip target - requires Info-ZIP or equivalent (zip32.exe)
 version(CoreDdoc) {} else:
 
 import std.algorithm, std.conv, std.datetime, std.exception, std.file, std.format, std.functional,
-       std.getopt, std.path, std.process, std.range, std.stdio, std.string, std.traits;
+       std.getopt, std.path, std.process, std.range, std.string, std.traits;
 
+import std.stdio : writeln;
 import std.parallelism : TaskPool, totalCPUs;
 
 const thisBuildScript = __FILE_FULL_PATH__.buildNormalizedPath;
@@ -172,6 +173,7 @@ Command-line parameters
         log("================================================================================");
     }
     {
+        import std.stdio : File;
         File lockFile;
         if (calledFromMake)
         {

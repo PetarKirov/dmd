@@ -1552,9 +1552,9 @@ class BuildRule
 
         if(dryRun)
         {
-            scope writer = stdout.lockingTextWriter;
+            scope writer = appender!string;
 
-            if(commandFunction)
+            if (commandFunction)
             {
                 writer.put("\n => Executing commandFunction()");
 
@@ -1563,11 +1563,11 @@ class BuildRule
 
                 if(targets.length)
                     writer.formattedWrite!" to generate:\n%(    - %s\n%)"(targets);
-
-                writer.put('\n');
             }
-            if(command)
-                writer.formattedWrite!"\n => %(%s %)\n\n"(command);
+            else if (command)
+                writer.formattedWrite!"\n => %(%s %)\n"(command);
+
+            writeln(writer.data);
         }
         else
         {
@@ -1589,7 +1589,7 @@ class BuildRule
     /// Writes relevant informations about this rule to stdout
     private void dump()
     {
-        scope writer = stdout.lockingTextWriter;
+        scope writer = appender!string;
         void write(T)(string fmt, T what)
         {
             static if (is(T : bool))
@@ -1609,7 +1609,8 @@ class BuildRule
         write("Targets: %-(\n -> %s%)\n\n", targets);
         write("Command: %-(%s %)\n\n", command);
         write("CommandFunction: %-s\n\n", commandFunction ? "Yes" : null);
-        writer.put("-----------------------------------------------------------\n");
+        writer.put("-----------------------------------------------------------");
+        writeln(writer.data);
     }
 }
 

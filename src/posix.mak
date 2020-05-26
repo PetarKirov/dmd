@@ -66,15 +66,9 @@ ifneq ($(HOST_CC),)
   HOST_CXX=$(HOST_CC)
 endif
 
-HOST_DC?=
-ifneq (,$(HOST_DC))
-  $(warning ========== Use HOST_DMD instead of HOST_DC ========== )
-  HOST_DMD=$(HOST_DC)
-endif
-
 # Host D compiler for bootstrapping
 ifeq (,$(AUTO_BOOTSTRAP))
-  # No bootstrap, a $(HOST_DC) installation must be available
+  # No bootstrap, a $(HOST_DMD) installation must be available
   HOST_DMD?=dmd
   HOST_DMD_PATH=$(abspath $(shell which $(HOST_DMD)))
   ifeq (,$(HOST_DMD_PATH))

@@ -948,6 +948,8 @@ void parseEnvironment()
     if (env.get("HOST_DMD", null).length == 0)
     {
         const hostDmd = env.get("HOST_DC", null);
+        if (hostDmd.length)
+            writeln("========== Use HOST_DMD instead of HOST_DC ==========");
         env["HOST_DMD"] = hostDmd.length ? hostDmd : "dmd";
     }
 

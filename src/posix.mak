@@ -68,6 +68,10 @@ else
   HOST_DMD_RUN=$(HOST_DMD) -conf=$(dir $(HOST_DMD))dmd.conf
 endif
 
+HOST_DMD?=dmd
+BUILD?=release
+HOST_CXX?=c++
+
 RUN_BUILD = $(GENERATED)/build \
 	    AUTO_BOOTSTRAP="$(AUTO_BOOTSTRAP)" \
 	    MAKE="$(MAKE)" \

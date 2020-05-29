@@ -1346,6 +1346,7 @@ Returns: a string that is the absolute path of the host's dmd executable
 */
 auto getHostDMDPath(string hostDmd)
 {
+    writeln("XXXXX getHostDMDPath hostDmd = ", hostDmd);
     version(Posix)
         return ["which", hostDmd].execute.output;
     else version(Windows)

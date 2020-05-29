@@ -45,20 +45,13 @@ GENERATED = ../generated
 G = $(GENERATED)/$(OS)/$(BUILD)/$(MODEL)
 $(shell mkdir -p $G)
 
-HOST_CXX?=c++
-# compatibility with old behavior
-ifneq ($(HOST_CC),)
-  $(warning ===== WARNING: Please use HOST_CXX=$(HOST_CC) instead of HOST_CC=$(HOST_CC). =====)
-  HOST_CXX=$(HOST_CC)
-endif
-
 # Host D compiler for bootstrapping
 ifeq (,$(AUTO_BOOTSTRAP))
   # No bootstrap, a $(HOST_DMD) installation must be available
   HOST_DMD?=dmd
   HOST_DMD_PATH=$(abspath $(shell which $(HOST_DMD)))
   ifeq (,$(HOST_DMD_PATH))
-    $(error '$(HOST_DMD)' not found, get a D compiler or make AUTO_BOOTSTRAP=1)
+    #$(error '$(HOST_DMD)' not found, get a D compiler or make AUTO_BOOTSTRAP=1)
   endif
   HOST_DMD_RUN:=$(HOST_DMD)
 else
@@ -76,17 +69,9 @@ else
 endif
 
 RUN_BUILD = $(GENERATED)/build \
-	    HOST_DMD="$(HOST_DMD)" \
-	    CXX="$(HOST_CXX)" \
-	    OS=$(OS) \
-	    BUILD=$(BUILD) \
-	    MODEL=$(MODEL) \
 	    AUTO_BOOTSTRAP="$(AUTO_BOOTSTRAP)" \
-	    DOCDIR="$(DOCDIR)" \
-	    STDDOC="$(STDDOC)" \
-	    DOC_OUTPUT_DIR="$(DOC_OUTPUT_DIR)" \
 	    MAKE="$(MAKE)" \
-	    --called-from-make
+	    --called-from-make \
 
 ######## Begin build targets
 
@@ -94,7 +79,7 @@ all: dmd
 .PHONY: all
 
 dmd: $(GENERATED)/build
-	$(RUN_BUILD) $@
+	$(RUN_BUILD) toolchain-info
 .PHONY: dmd
 
 $(GENERATED)/build: build.d $(HOST_DMD_PATH)

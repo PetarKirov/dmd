@@ -150,7 +150,8 @@ Command-line parameters
         *cast(string[string]*)&processEnv = environment.toAA;
     }();
     parseEnvironment;
-    processEnvironment;
+    setUpMiscTools();
+    setUpDCompiler();
     processEnvironmentCxx;
     sources = sourceFiles;
 
@@ -999,12 +1000,21 @@ void parseEnvironment()
     }
 }
 
-/// Checks the environment variables and flags
-void processEnvironment()
+/// Sets up the `detab`, `tolf` and `zip` command-line tools.
+void setUpMiscTools()
+{
+    env.getDefault("DETAB", "detab");
+    env.getDefault("TOLF", "tolf");
+    version (Windows)
+        env.getDefault("ZIP", "zip32");
+    else
+        env.getDefault("ZIP", "zip");
+}
+
+/// Determines the D compiler kind and path and sets the compiler flags
+void setUpDCompiler()
 {
     import std.meta : AliasSeq;
-
-    const os = env["OS"];
 
     const hostDMDVersion = [env["HOST_DMD_RUN"], "--version"].execute.output;
 
@@ -1023,13 +1033,15 @@ void processEnvironment()
         env["HOST_DMD_KIND"] = "gdc";
 
     env["DMD_PATH"] = env["G"].buildPath("dmd").exeName;
-    env.getDefault("DETAB", "detab");
-    env.getDefault("TOLF", "tolf");
-    version (Windows)
-        env.getDefault("ZIP", "zip32");
-    else
-        env.getDefault("ZIP", "zip");
 
+    string[] dflags = getDFlags(env);
+    // Retain user-defined flags
+    flags["DFLAGS"] = dflags ~= flags.get("DFLAGS", []);
+}
+
+/// Determines the D compiler flags - the default ones and the ones requested by `ENABLE_*` options.
+string[] getDFlags(ref string[string] env)
+{
     string[] dflags = ["-version=MARS", "-w", "-de", env["PIC_FLAG"], env["MODEL_FLAG"], "-J"~env["G"]];
     if (env["HOST_DMD_KIND"] != "gdc")
         dflags ~= ["-dip25"]; // gdmd doesn't support -dip25
@@ -1074,8 +1086,7 @@ void processEnvironment()
         dflags ~= ["-fsanitize="~env["ENABLE_SANITIZERS"]];
     }
 
-    // Retain user-defined flags
-    flags["DFLAGS"] = dflags ~= flags.get("DFLAGS", []);
+    return dflags;
 }
 
 /// Setup environment for a C++ compiler

@@ -1,4 +1,8 @@
 ################################################################################
+# This Makefile is a wrapper (for backwards-compatibility) of src/build.d.
+# All new targets should be implemented in build.d. Don't add new targets here,
+# if possible - new targets should be invoked directly from build.d.
+#
 # Important variables:
 # --------------------
 #
@@ -26,7 +30,7 @@
 # Targets
 # -------
 #
-# all					Build dmd
+# all                   Build dmd
 # unittest              Run all unittest blocks
 # cxx-unittest          Check conformance of the C++ headers
 # build-examples        Build DMD as library examples
@@ -77,35 +81,47 @@ RUN_BUILD = $(GENERATED)/build \
 	    MAKE="$(MAKE)" \
 	    --called-from-make \
 
-######## Begin build targets
+################################################################################
+# Begin build targets
+################################################################################
 
 all: dmd
 .PHONY: all
+
+######################################################
 
 dmd: $(GENERATED)/build
 	$(RUN_BUILD) toolchain-info
 .PHONY: dmd
 
+######################################################
+
 $(GENERATED)/build: build.d $(HOST_DMD_PATH)
 	$(HOST_DMD_RUN) -of$@ -g build.d
 
+######################################################
+
 auto-tester-build: $(GENERATED)/build
 	$(RUN_BUILD) $@
-
 .PHONY: auto-tester-build
+
+######################################################
 
 toolchain-info: $(GENERATED)/build
 	$(RUN_BUILD) $@
 
+######################################################
+
 unittest: $G/dmd-unittest
 	$<
 
-######## Manual cleanup
+######################################################
 
 clean:
 	rm -Rf $(GENERATED)
 
-######## Download and install the last dmd buildable without dmd
+######################################################
+# Download and install the last dmd buildable without dmd
 
 ifneq (,$(AUTO_BOOTSTRAP))
 CURL_FLAGS:=-fsSL --retry 5 --retry-max-time 120 --connect-timeout 5 --speed-time 30 --speed-limit 1024
@@ -119,12 +135,8 @@ else
 endif
 endif
 
-FORCE: ;
 
-################################################################################
-# Generate the man pages
-################################################################################
-
+######################################################
 
 $(GENERATED)/docs/%: $(GENERATED)/build
 	$(RUN_BUILD) $@
@@ -143,10 +155,7 @@ checkwhitespace: $(GENERATED)/build
 	$(RUN_BUILD) $@
 
 ######################################################
-# DScanner
-######################################################
 
-# runs static code analysis with Dscanner
 style: $(GENERATED)/build
 	$(RUN_BUILD) $@
 
@@ -166,18 +175,10 @@ gitzip:
 	git archive --format=zip HEAD > $(ZIPFILE)
 
 ######################################################
-# Default rule to forward targets to build.d
-
-$G/%: $(GENERATED)/build FORCE
-	$(RUN_BUILD) $@
-
-################################################################################
-# DDoc documentation generation
-################################################################################
-
 
 html: $(GENERATED)/build FORCE
 	$(RUN_BUILD) $@
+.PHONY: html
 
 ######################################################
 

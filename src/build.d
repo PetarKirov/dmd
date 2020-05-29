@@ -15,8 +15,9 @@ zip target - requires Info-ZIP or equivalent (zip32.exe)
 version(CoreDdoc) {} else:
 
 import std.algorithm, std.conv, std.datetime, std.exception, std.file, std.format, std.functional,
-       std.getopt, std.path, std.process, std.range, std.string, std.traits;
+       std.getopt, std.path, std.range, std.string, std.traits;
 
+import std.process : execute, ProcessException, spawnShell, wait;
 import std.stdio : writeln;
 import std.parallelism : TaskPool, totalCPUs;
 
@@ -26,6 +27,10 @@ const dmdRepo = srcDir.dirName;
 shared bool verbose; // output verbose logging
 shared bool force; // always build everything (ignores timestamp checking)
 shared bool dryRun; /// dont execute targets, just print command to be executed
+
+// Copy of the current process environment.
+// Read-only after args2Environment returns.
+immutable string[string] processEnv;
 
 __gshared string[string] env;
 __gshared string[][string] flags;
@@ -138,6 +143,12 @@ Command-line parameters
     // parse arguments
     args.popFront;
     args2Environment(args);
+    () @trusted
+    {
+        // Initial construction of immutable data
+        import std.process : environment;
+        *cast(string[string]*)&processEnv = environment.toAA;
+    }();
     parseEnvironment;
     processEnvironment;
     processEnvironmentCxx;
@@ -710,7 +721,10 @@ alias toolchainInfo = makeRule!((builder, rule) => builder
 
         show("MAKE", [env.get("MAKE", "make"), "--version"]);
         version (Posix)
+        {
+            import std.process : nativeShell;
             show("SHELL", [env.get("SHELL", nativeShell), "--version"]);  // cmd.exe --version hangs
+        }
         show("HOST_DMD", [env["HOST_DMD_RUN"], "--version"]);
         version (Posix)
             show("HOST_CXX", [env["CXX"], "--version"]);
@@ -861,7 +875,7 @@ void parseEnvironment()
         verbose = "1" == env.getDefault("VERBOSE", null);
 
     // This block is temporary until we can remove the windows make files
-    if ("DDEBUG" in environment)
+    if ("DDEBUG" in processEnv)
         abortBuild("ERROR: the DDEBUG variable is deprecated!");
 
     version (Windows)
@@ -929,7 +943,7 @@ void parseEnvironment()
     else
         enum installPref = "..";
 
-    env.getDefault("INSTALL", environment.get("INSTALL_DIR", dmdRepo.buildPath(installPref, "install")));
+    env.getDefault("INSTALL", env.getDefault("INSTALL_DIR", dmdRepo.buildPath(installPref, "install")));
 
     env.getDefault("DOCSRC", dmdRepo.buildPath("dlang.org"));
     if (env.get("DOCDIR", null).length == 0)
@@ -1402,6 +1416,7 @@ void args2Environment(ref string[] args)
         }
         else
         {
+            import std.process : environment;
             environment[key] = value;
             env[key] = value;
         }
@@ -1422,13 +1437,14 @@ Params:
 
 Returns: the value associated to key
 */
+pure @safe
 auto getDefault(ref string[string] env, string key, string default_)
 {
     if (auto ex = key in env)
         return *ex;
 
-    if (key in environment)
-        env[key] = environment[key];
+    if (auto value = key in processEnv)
+        env[key] = *value;
     else
         env[key] = default_;
 
@@ -1438,6 +1454,7 @@ auto getDefault(ref string[string] env, string key, string default_)
 /**
 Get the value of a build variable that should always be 0, 1 or empty.
 */
+pure @safe
 bool getNumberedBool(ref string[string] env, string varname)
 {
     const value = env.getDefault(varname, null);
@@ -1805,6 +1822,7 @@ Throws: BuildException with the supplied message
 
 Returns: nothing but enables `throw abortBuild` to convey the resulting behavior
 */
+pure @safe
 BuildException abortBuild(string msg = "Build failed!")
 {
     throw new BuildException("ERROR: " ~ msg);
@@ -1812,6 +1830,7 @@ BuildException abortBuild(string msg = "Build failed!")
 
 class BuildException : Exception
 {
+    @safe pure @nogc nothrow
     this(string msg) { super(msg); }
 }
 
@@ -1834,6 +1853,7 @@ auto tryRun(T)(T args, string workDir = runDir)
 {
     args = args.filter!(a => !a.empty).array;
     log("Run: %s", args.join(" "));
+    import std.process : Config;
     return execute(args, null, Config.none, size_t.max, workDir);
 }
 

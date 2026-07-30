@@ -71,8 +71,10 @@ subPackage {
   importPaths "compiler/src"
   sourcePaths
 
+  # astbase.d (the parse-only AST for external tools) is omitted: the
+  # LanguageServer patch set does not cover it (DotIdExp/IdentifierAtLoc
+  # call sites), and nothing in the semantic frontend imports it.
   sourceFiles \
-    "compiler/src/dmd/astbase.d" \
     "compiler/src/dmd/parse.d" \
     "compiler/src/dmd/visitor/transitive.d" \
     "compiler/src/dmd/visitor/permissive.d" \

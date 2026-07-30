@@ -25,6 +25,7 @@ subPackage {
   targetType "library"
   importPaths "compiler/src"
   sourcePaths "compiler/src/dmd/common" "compiler/src/dmd/root"
+  versions "LanguageServer"
 }
 
 subPackage {
@@ -50,7 +51,8 @@ subPackage {
 
   versions \
     "CallbackAPI" \
-    "DMDLIB"
+    "DMDLIB" \
+    "LanguageServer"
 
   # generate files `generated/dub/{VERSION,SYSCONFDIR.imp}` for string-imports
   # by building & running the config.d tool
@@ -76,7 +78,7 @@ subPackage {
     "compiler/src/dmd/visitor/permissive.d" \
     "compiler/src/dmd/visitor/strict.d"
 
-  versions "CallbackAPI"
+  versions "CallbackAPI" "LanguageServer"
 
   dependency "dmd:lexer" version="*"
 }
@@ -93,7 +95,8 @@ subPackage {
     "GC" \
     "NoMain" \
     "MARS" \
-    "CallbackAPI"
+    "CallbackAPI" \
+    "LanguageServer"
 
   excludedSourceFiles "compiler/src/dmd/backend/*"
   excludedSourceFiles "compiler/src/dmd/glue/*"

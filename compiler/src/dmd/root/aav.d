@@ -53,7 +53,21 @@ version(GC)
 
         @property auto asRange() pure nothrow @nogc
         {
-            return aa.byKeyValue;
+            // cast the storage KEY (void* for class keys) back to K so
+            // consumers iterate typed pairs like the non-GC implementation
+            static struct Pair { K key; V value; }
+            static struct Range
+            {
+                typeof(aa.byKeyValue()) r;
+                @property bool empty() { return r.empty; }
+                void popFront() { r.popFront(); }
+                @property Pair front()
+                {
+                    auto kv = r.front;
+                    return Pair(cast(K)kv.key, kv.value);
+                }
+            }
+            return Range(aa.byKeyValue);
         }
     }
 

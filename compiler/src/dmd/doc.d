@@ -626,14 +626,14 @@ private:
 /** Lazily initializes and returns the escape table.
 Turns out it eats a lot of memory.
 */
-Escape* escapetable(Module _this) nothrow
+public Escape* escapetable(Module _this) nothrow
 {
     if (!_this._escapetable)
         _this._escapetable = new Escape();
     return cast(Escape*) _this._escapetable;
 }
 
-struct Escape
+public struct Escape
 {
     const(char)[][char.max] strings;
 
@@ -672,7 +672,7 @@ struct Escape
 
 /***********************************************************
  */
-class Section
+public class Section
 {
     const(char)[] name;
     const(char)[] body_;
@@ -736,7 +736,7 @@ class Section
 
 /***********************************************************
  */
-final class ParamSection : Section
+public final class ParamSection : Section
 {
     override void write(Loc loc, DocComment* dc, Scope* sc, Dsymbols* a, ref OutBuffer buf)
     {
@@ -895,7 +895,7 @@ final class ParamSection : Section
 
 /***********************************************************
  */
-final class MacroSection : Section
+public final class MacroSection : Section
 {
     override void write(Loc loc, DocComment* dc, Scope* sc, Dsymbols* a, ref OutBuffer buf)
     {
@@ -1340,7 +1340,7 @@ void emitVisibility(ref OutBuffer buf, Visibility vis)
     buf.writeByte(' ');
 }
 
-void emitComment(Dsymbol s, ref OutBuffer buf, Scope* sc)
+public void emitComment(Dsymbol s, ref OutBuffer buf, Scope* sc)
 {
     extern (C++) final class EmitComment : Visitor
     {
@@ -1624,7 +1624,7 @@ void emitComment(Dsymbol s, ref OutBuffer buf, Scope* sc)
         s.accept(v);
 }
 
-void toDocBuffer(Dsymbol s, ref OutBuffer buf, Scope* sc)
+public void toDocBuffer(Dsymbol s, ref OutBuffer buf, Scope* sc)
 {
     extern (C++) final class ToDocBuffer : Visitor
     {
@@ -4106,7 +4106,7 @@ size_t endRowAndTable(ref OutBuffer buf, size_t iStart, size_t iEnd, ref Markdow
  *  buf   = an OutBuffer containing the DDoc
  *  offset = the index within buf to start highlighting
  */
-void highlightText(Scope* sc, Dsymbols* a, Loc loc, ref OutBuffer buf, size_t offset)
+public void highlightText(Scope* sc, Dsymbols* a, Loc loc, ref OutBuffer buf, size_t offset)
 {
     loc.nextLine();
 
@@ -5220,7 +5220,7 @@ bool isCVariadicArg(const(char)[] p) @nogc nothrow pure @safe
  * Determine if p points to the start of an identifier.
  */
 @trusted
-bool isIdStart(const(char)* p) @nogc nothrow pure
+public bool isIdStart(const(char)* p) @nogc nothrow pure
 {
     import dmd.common.charactertables;
 
@@ -5242,7 +5242,7 @@ bool isIdStart(const(char)* p) @nogc nothrow pure
  * Determine if p points to the rest of an identifier.
  */
 @trusted
-bool isIdTail(const(char)* p) @nogc nothrow pure
+public bool isIdTail(const(char)* p) @nogc nothrow pure
 {
     import dmd.common.charactertables;
 

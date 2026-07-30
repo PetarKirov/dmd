@@ -628,6 +628,26 @@ extern (C++) abstract class Expression : ASTNode
         tiExp[EXP.prettyFunction          ] = typeid(PrettyFuncInitExp);
         tiExp[EXP.classReference          ] = typeid(ClassReferenceExp);
 
+        // Ops that `expSize` knows how to size but this table did not name.
+        // `copy()` asserts on any of them in a non-release build, so an
+        // `i""` literal in a template body — `syntaxCopy`d on instantiation —
+        // took the whole language server down. Keep the two tables in step.
+        tiExp[EXP.interpolated            ] = typeid(InterpExp);
+        tiExp[EXP.throw_                  ] = typeid(ThrowExp);
+        tiExp[EXP.thrownException         ] = typeid(ThrownExceptionExp);
+        tiExp[EXP.compoundLiteral         ] = typeid(CompoundLiteralExp);
+        tiExp[EXP.loweredAssignExp        ] = typeid(LoweredAssignExp);
+        tiExp[EXP.objcClassReference      ] = typeid(ObjcClassReferenceExp);
+        tiExp[EXP._Generic                ] = typeid(GenericExp);
+
+        // The CTFE singletons share one class.
+        tiExp[EXP.break_                  ] = typeid(CTFEExp);
+        tiExp[EXP.continue_               ] = typeid(CTFEExp);
+        tiExp[EXP.goto_                   ] = typeid(CTFEExp);
+        tiExp[EXP.voidExpression          ] = typeid(CTFEExp);
+        tiExp[EXP.cantExpression          ] = typeid(CTFEExp);
+        tiExp[EXP.showCtfeContext         ] = typeid(CTFEExp);
+
         tiExp[EXP.lessThan                ] = typeid(CmpExp);
         tiExp[EXP.lessOrEqual             ] = typeid(CmpExp);
         tiExp[EXP.greaterThan             ] = typeid(CmpExp);

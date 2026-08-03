@@ -540,18 +540,38 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                     // Skip over unittest block by counting { }
                     Loc loc = token.loc;
                     int braces = 0;
+                    /* A documented unittest is an `Examples:` section of the
+                     * declaration above it, and a language server is asked
+                     * about imported symbols far more often than about the
+                     * root module's own. Record the body's extent while
+                     * skipping so the text can be kept without parsing it:
+                     * no AST, no semantic, and so none of the codegen-culling
+                     * hazard the isRoot guard above exists to avoid.
+                     */
+                    version (LanguageServer)
+                    {
+                        const(char)* begPtr = null;
+                        const(char)* endPtr = null;
+                    }
                     while (1)
                     {
                         nextToken();
                         switch (token.value)
                         {
                         case TOK.leftCurly:
+                            version (LanguageServer)
+                            {
+                                if (braces == 0)
+                                    begPtr = token.ptr + 1; // past the brace
+                            }
                             ++braces;
                             continue;
 
                         case TOK.rightCurly:
                             if (--braces)
                                 continue;
+                            version (LanguageServer)
+                                endPtr = token.ptr;
                             nextToken();
                             break;
 
@@ -565,9 +585,19 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                         }
                         break;
                     }
+                    char* docline = null;
+                    version (LanguageServer)
+                    {
+                        docline = extractUnittestBody(begPtr, endPtr);
+                    }
                     // Workaround 14894. Add an empty unittest declaration to keep
                     // the number of symbols in this scope independent of -unittest.
-                    s = new AST.UnitTestDeclaration(loc, token.loc, STC.none, null);
+                    s = new AST.UnitTestDeclaration(loc, token.loc, STC.none, docline);
+                    version (LanguageServer)
+                    {
+                        if (docline && *pLastDecl)
+                            (*pLastDecl).ddocUnittest = cast(AST.UnitTestDeclaration)s;
+                    }
                 }
                 break;
 
@@ -2839,6 +2869,39 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
      *      unittest { body }
      * Current token is 'unittest'.
      */
+    /**
+     * The source text of a unittest body, for its declaration's `Examples:`
+     * section. Must be copied eagerly: the lexer releases the buffer before
+     * documentation is generated.
+     *
+     * Params:
+     *  begPtr = first character after the opening brace
+     *  endPtr = the closing brace
+     * Returns: a NUL-terminated, LF-terminated copy, or null when there is
+     *  nothing to keep or documentation output is off
+     */
+    private char* extractUnittestBody(const(char)* begPtr, const(char)* endPtr)
+    {
+        if (!compileEnv.ddocOutput || begPtr is null || endPtr is null || endPtr <= begPtr)
+            return null;
+
+        /* Remove trailing whitespaces */
+        for (const(char)* p = endPtr - 1; begPtr <= p && (*p == ' ' || *p == '\r' || *p == '\n' || *p == '\t'); --p)
+        {
+            endPtr = p;
+        }
+
+        const len = endPtr - begPtr;
+        if (len <= 0)
+            return null;
+
+        auto docline = cast(char*)mem.xmalloc_noscan(len + 2);
+        docline[0 .. len] = begPtr[0 .. len];
+        docline[len] = '\n'; // Terminate all lines by LF
+        docline[len + 1] = '\0';
+        return docline;
+    }
+
     private AST.Dsymbol parseUnitTest(PrefixAttributes!AST* pAttrs)
     {
         const loc = token.loc;
@@ -2852,24 +2915,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
 
         /** Extract unittest body as a string. Must be done eagerly since memory
          will be released by the lexer before doc gen. */
-        char* docline = null;
-        if (compileEnv.ddocOutput && endPtr > begPtr)
-        {
-            /* Remove trailing whitespaces */
-            for (const(char)* p = endPtr - 1; begPtr <= p && (*p == ' ' || *p == '\r' || *p == '\n' || *p == '\t'); --p)
-            {
-                endPtr = p;
-            }
-
-            size_t len = endPtr - begPtr;
-            if (len > 0)
-            {
-                docline = cast(char*)mem.xmalloc_noscan(len + 2);
-                docline[0 .. len] = begPtr[0 .. len];
-                docline[len] = '\n'; // Terminate all lines by LF
-                docline[len + 1] = '\0';
-            }
-        }
+        char* docline = extractUnittestBody(begPtr, endPtr);
 
         auto f = new AST.UnitTestDeclaration(loc, token.loc, stc, docline);
         f.fbody = sbody;

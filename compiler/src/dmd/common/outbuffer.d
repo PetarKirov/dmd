@@ -851,6 +851,60 @@ struct OutBuffer
 
 /****** copied from core.internal.string *************/
 
+/**
+ * Escape special characters (such as quotes and whitespaces) for a JSON string literal
+ * Params:
+ *   buf = buffer to write to
+ *   str = string to escape and write as string literal
+ */
+void writeEscapeJSONString(ref OutBuffer buf, const(char)[] str) nothrow
+{
+    foreach (c; str)
+    {
+        switch (c)
+        {
+        case '\n':
+            buf.writestring("\\n");
+            break;
+        case '\r':
+            buf.writestring("\\r");
+            break;
+        case '\t':
+            buf.writestring("\\t");
+            break;
+        case '\"':
+            buf.writestring("\\\"");
+            break;
+        case '\\':
+            buf.writestring("\\\\");
+            break;
+        case '\b':
+            buf.writestring("\\b");
+            break;
+        case '\f':
+            buf.writestring("\\f");
+            break;
+        default:
+            if (c < 0x20)
+                buf.printf("\\u%04x", c);
+            else
+            {
+                // Note that UTF-8 chars pass through here just fine
+                buf.writeByte(c);
+            }
+            break;
+        }
+    }
+}
+
+unittest
+{
+    OutBuffer buf;
+    buf.writeEscapeJSONString("a\"b\\c\nd\x01é");
+    assert(buf[] == `a\"b\\c\nd\u0001é`);
+}
+
+
 private:
 
 alias UnsignedStringBuf = char[20];

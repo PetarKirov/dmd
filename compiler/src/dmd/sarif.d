@@ -22,7 +22,6 @@ import core.stdc.string : strchr;
 import dmd.errors;
 import dmd.errorsink;
 import dmd.globals;
-import dmd.json : writeEscapeJSONString;
 import dmd.location;
 import dmd.common.outbuffer;
 

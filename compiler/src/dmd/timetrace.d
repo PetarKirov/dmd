@@ -21,7 +21,6 @@ import dmd.expression;
 import dmd.root.array;
 import dmd.common.outbuffer;
 import dmd.root.string : toDString;
-import dmd.json : writeEscapeJSONString;
 
 // Thread local profiler instance (multithread currently not supported because compiler is single-threaded)
 TimeTraceProfiler* timeTraceProfiler = null;

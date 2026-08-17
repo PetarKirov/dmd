@@ -778,7 +778,22 @@ class Lexer
                             {
                                 const u = decodeUTF();
                                 if (u == PS || u == LS)
+                                {
+                                    version (DMDLIB)
+                                    {
+                                        if (commentToken)
+                                        {
+                                            // decodeUTF advanced p to the terminator's last
+                                            // byte; step back to its first byte so the next
+                                            // scan sees the whole sequence, matching the
+                                            // '\n' case where p is left at the unconsumed
+                                            // terminator. Without this the scanner resumes
+                                            // mid-sequence and desyncs.
+                                            p -= 2;
+                                        }
+                                    }
                                     break;
+                                }
                             }
                             continue;
                         }
@@ -1213,6 +1228,17 @@ class Lexer
                                 t.value = TOK.endOfLine;
                                 tokenizeNewlines = false;
                                 return;
+                            }
+                            version (DMDLIB)
+                            {
+                                // Like the '\n' and '\r' cases: U+2028/U+2029
+                                // are whitespace and must be tokenized, not
+                                // silently consumed, for full-fidelity lexing.
+                                if (whitespaceToken)
+                                {
+                                    t.value = TOK.whitespace;
+                                    return;
+                                }
                             }
                             continue;
                         }

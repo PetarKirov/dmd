@@ -286,3 +286,72 @@ unittest
 
     assert(diagnosticMessages == excepted);
 }
+
+// A U+2028 LINE SEPARATOR terminates a // comment. With `commentToken` the
+// scanner previously resumed inside the terminator's UTF-8 sequence
+// (decodeUTF had advanced past two of its three bytes and the DMDLIB path,
+// unlike the non-DMDLIB one, does not step over the terminator), desyncing
+// every token after the comment.
+unittest
+{
+    immutable code = "int a; // c\u2028int b;";
+
+    immutable expectedPlain = [
+        TOK.int32,
+        TOK.identifier,
+        TOK.semicolon,
+        TOK.int32,
+        TOK.identifier,
+        TOK.semicolon,
+    ];
+
+    immutable expectedComments = [
+        TOK.int32,
+        TOK.identifier,
+        TOK.semicolon,
+        TOK.comment,
+        TOK.int32,
+        TOK.identifier,
+        TOK.semicolon,
+    ];
+
+    immutable expectedTrivia = [
+        TOK.int32,
+        TOK.whitespace,
+        TOK.identifier,
+        TOK.semicolon,
+        TOK.whitespace,
+        TOK.comment,
+        TOK.whitespace, // the U+2028 terminator itself
+        TOK.int32,
+        TOK.whitespace,
+        TOK.identifier,
+        TOK.semicolon,
+    ];
+
+    test(code, expectedPlain, false, false);
+    test(code, expectedComments, true, false);
+    test(code, expectedTrivia, true, true);
+}
+
+// Bare U+2028/U+2029 between tokens are whitespace and must yield
+// TOK.whitespace under `whitespaceToken` like every other whitespace
+// character, instead of being silently consumed.
+unittest
+{
+    immutable code = "int a;\u2029int b;";
+
+    immutable expected = [
+        TOK.int32,
+        TOK.whitespace,
+        TOK.identifier,
+        TOK.semicolon,
+        TOK.whitespace, // the U+2029 PARAGRAPH SEPARATOR
+        TOK.int32,
+        TOK.whitespace,
+        TOK.identifier,
+        TOK.semicolon,
+    ];
+
+    test(code, expected, false, true);
+}

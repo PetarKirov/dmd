@@ -45,6 +45,7 @@ subPackage {
     "compiler/src/dmd/identifier.d" \
     "compiler/src/dmd/lexer.d" \
     "compiler/src/dmd/location.d" \
+    "compiler/src/dmd/rootobject.d" \
     "compiler/src/dmd/sarif.d" \
     "compiler/src/dmd/tokens.d" \
     "compiler/src/dmd/utils.d" \
@@ -110,6 +111,7 @@ subPackage {
   excludedSourceFiles "compiler/src/dmd/{\
     astenums,\
     astbase,\
+    astenums,\
     console,\
     entity,\
     errors,\
@@ -121,6 +123,7 @@ subPackage {
     lexer,\
     location,\
     parse,\
+    rootobject,\
     sarif,\
     tokens,\
     utf,\

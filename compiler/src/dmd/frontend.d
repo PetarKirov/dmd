@@ -14,7 +14,7 @@ import dmd.astcodegen : ASTCodegen;
 import dmd.astenums : CHECKENABLE;
 import dmd.dmodule : Module;
 import dmd.errors : DiagnosticHandler, diagnosticHandler, FatalErrorHandler, fatalErrorHandler, Classification;
-import dmd.globals : DiagnosticReporting;
+import dmd.globals : DiagnosticReporting, Param;
 import dmd.location;
 
 import std.typecons : Tuple;
@@ -97,12 +97,19 @@ Params:
     fatalErrorHandler = a delegate to configure what to do with fatal errors (default is to call exit(EXIT_FAILURE)).
     versionIdentifiers = a list of version identifiers that should be enabled
     contractChecks = indicates which contracts should be enabled or not
+    vendorVersion = the compiler-vendor version identifier to predefine
+        (`DigitalMars`; a tool emulating LDC passes `LDC`)
+    configureParams = called once `global.params` holds its defaults and
+        before the predefined version identifiers are derived from them, so
+        settings such as `betterC` or ddoc output are reflected in them
 */
 void initDMD(
     DiagnosticHandler diagnosticHandler = null,
     FatalErrorHandler fatalErrorHandler = null,
     const string[] versionIdentifiers = [],
-    ContractChecks contractChecks = ContractChecks()
+    ContractChecks contractChecks = ContractChecks(),
+    string vendorVersion = "DigitalMars",
+    scope void delegate(ref Param) configureParams = null,
 )
 {
     import dmd.root.ctfloat : CTFloat;
@@ -136,6 +143,9 @@ void initDMD(
         useSwitchError = contractChecks.switchError;
     }
 
+    if (configureParams)
+        configureParams(global.params);
+
     foreach (id; versionIdentifiers)
         VersionCondition.addGlobalIdent(id);
 
@@ -151,7 +161,7 @@ void initDMD(
     Loc._init();
     EscapeState.reset();
 
-    addDefaultVersionIdentifiers(global.params, target);
+    addDefaultVersionIdentifiers(global.params, target, vendorVersion);
 
     version (CRuntime_Microsoft)
         initFPU();

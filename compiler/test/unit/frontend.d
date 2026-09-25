@@ -395,3 +395,41 @@ bool endsWith(string diag, string msg)
 {
     return diag.length >= msg.length && diag[$ - msg.length .. $] == msg;
 }
+
+@("initDMD - vendor version")
+unittest
+{
+    import dmd.frontend : ContractChecks, initDMD;
+    import dmd.globals : global;
+
+    static bool predefined(string ident)
+    {
+        foreach (id; global.versionids[])
+            if (id.toString() == ident)
+                return true;
+        return false;
+    }
+
+    initDMD(null, null, [], ContractChecks(), "LDC");
+    assert(predefined("LDC"));
+    assert(!predefined("DigitalMars"));
+}
+
+@("initDMD - configureParams runs before the predefined versions")
+unittest
+{
+    import dmd.frontend : ContractChecks, initDMD;
+    import dmd.globals : global, Param;
+
+    static bool predefined(string ident)
+    {
+        foreach (id; global.versionids[])
+            if (id.toString() == ident)
+                return true;
+        return false;
+    }
+
+    initDMD(null, null, [], ContractChecks(), "DigitalMars", (ref Param p) { p.betterC = true; });
+    assert(predefined("D_BetterC"));
+    assert(!predefined("D_ModuleInfo"));
+}

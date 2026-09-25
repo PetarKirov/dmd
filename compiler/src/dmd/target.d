@@ -104,14 +104,18 @@ ubyte defaultTargetOSMajor() @safe
  * Params:
  *      params = which target to compile for (set by `setTarget()`)
  *      tgt    = target
+ *      vendorVersion = the compiler-vendor version identifier to predefine
+ *                      (`DigitalMars` for DMD; a library frontend emulating
+ *                      another compiler passes e.g. `LDC`)
  */
 public
-void addDefaultVersionIdentifiers(const ref Param params, const ref Target tgt)
+void addDefaultVersionIdentifiers(const ref Param params, const ref Target tgt,
+    string vendorVersion = "DigitalMars")
 {
     import dmd.cond : VersionCondition;
     import dmd.dmdparams : driverParams, PIC;
 
-    VersionCondition.addPredefinedGlobalIdent("DigitalMars");
+    VersionCondition.addPredefinedGlobalIdent(vendorVersion);
     VersionCondition.addPredefinedGlobalIdent("LittleEndian");
     VersionCondition.addPredefinedGlobalIdent("D_Version2");
     VersionCondition.addPredefinedGlobalIdent("all");

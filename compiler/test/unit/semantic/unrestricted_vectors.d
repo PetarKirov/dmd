@@ -48,3 +48,21 @@ unittest
     t.module_.fullSemantic();
     assert(!t.diagnostics.hasErrors);
 }
+
+@("frontend - initDMD predefines the requested vendor version")
+unittest
+{
+    import dmd.globals : global;
+
+    static bool predefined(string ident)
+    {
+        foreach (id; global.versionids[])
+            if (id.toString() == ident)
+                return true;
+        return false;
+    }
+
+    initDMD(null, null, [], ContractChecks(), "LDC");
+    assert(predefined("LDC"));
+    assert(!predefined("DigitalMars"));
+}

@@ -160,6 +160,7 @@ struct Target
     d_bool isX86_64;          // generate 64 bit code for x86_64; true by default for 64 bit dmd
     d_bool isX86;             // generate 32 bit Intel x86 code
     d_bool isLP64;            // pointers are 64 bits
+    d_bool unrestrictedVectors; // accept vectors of any size (LLVM-backed frontends)
 
     // Environmental
     DString obj_ext;    /// extension for object files

@@ -315,7 +315,7 @@ extern (C++) struct Target
     import dmd.func : FuncDeclaration;
     import dmd.location;
     import dmd.astenums : LINK, TY;
-    import dmd.mtype : Type, TypeFunction, TypeTuple;
+    import dmd.mtype : Type, TypeFunction, TypeTuple, TypeVector;
     import dmd.typesem;
     import dmd.root.ctfloat : real_t;
     import dmd.statement : Statement;
@@ -375,6 +375,10 @@ extern (C++) struct Target
     bool isX86_64;          // generate 64 bit code for x86_64; true by default for 64 bit dmd
     bool isX86;             // generate 32 bit Intel x86 code
     bool isLP64;            // pointers are 64 bits
+    /// Accept vector types of any size and operations on them, as the LLVM
+    /// backends (which lower every `__vector` shape) do. Set by frontends
+    /// that emulate LDC's semantics; false for DMD's own x86 backend.
+    bool unrestrictedVectors;
 
     // Environmental
     const(char)[] obj_ext;    /// extension for object files
@@ -697,7 +701,7 @@ extern (C++) struct Target
      */
     extern (C++) int isVectorTypeSupported(int sz, Type type) @safe
     {
-        if (!isXmmSupported())
+        if (!unrestrictedVectors && !isXmmSupported())
             return 1; // not supported
 
         switch (type.ty)
@@ -717,6 +721,9 @@ extern (C++) struct Target
         default:
             return 2; // wrong base type
         }
+
+        if (unrestrictedVectors)
+            return 0;
 
         // Whether a vector is really supported depends on the CPU being targeted.
         if (sz == 16)
@@ -773,6 +780,9 @@ extern (C++) struct Target
         auto tvec = type.isTypeVector();
         if (tvec is null)
             return true; // not a vector op
+        if (unrestrictedVectors)
+            return isUnrestrictedVectorOpSupported(tvec, op);
+
         const vecsize = cast(int)tvec.basetype.size();
         const elemty = cast(int)tvec.elementType().ty;
 
@@ -1382,6 +1392,37 @@ extern (C++) struct Target
     /* All functions after this point are extern (D), as they are only relevant
      * for targets of DMD, and should not be used in front-end code.
      */
+
+    /**
+     * The vector operations an LLVM backend lowers for any vector shape: the
+     * `unrestrictedVectors` answer to `isVectorOpSupported`, matching LDC's
+     * `IN_LLVM` branches.
+     */
+    extern (D) private static bool isUnrestrictedVectorOpSupported(TypeVector tvec, EXP op)
+    {
+        switch (op)
+        {
+        case EXP.uadd, EXP.negate:
+        case EXP.lessThan, EXP.greaterThan, EXP.lessOrEqual, EXP.greaterOrEqual:
+        case EXP.equal, EXP.notEqual:
+        case EXP.add, EXP.addAssign, EXP.min, EXP.minAssign:
+        case EXP.mul, EXP.mulAssign, EXP.div, EXP.divAssign:
+        case EXP.mod, EXP.modAssign:
+            return tvec.isScalar();
+
+        case EXP.identity, EXP.notIdentity:
+            return true;
+
+        case EXP.leftShift, EXP.leftShiftAssign, EXP.rightShift, EXP.rightShiftAssign,
+             EXP.unsignedRightShift, EXP.unsignedRightShiftAssign:
+        case EXP.and, EXP.andAssign, EXP.or, EXP.orAssign, EXP.xor, EXP.xorAssign:
+        case EXP.tilde:
+            return tvec.isIntegral();
+
+        default:
+            return false;
+        }
+    }
 
     /******************
      * Returns:

@@ -67,7 +67,9 @@ TypeTuple toArgTypes_sysv_x64(Type t)
         foreach (c; classes[1 .. $])
             assert(c == Class.sseUp);
 
-        assert(size % 8 == 0);
+        // With `unrestrictedVectors`, a vector of any size (e.g. a 12-byte
+        // `__vector(float[3])`) can fill its last eightbyte partially.
+        assert(target.unrestrictedVectors ? size <= N * 8 : size % 8 == 0);
         import dmd.typesem : sarrayOf;
         return new TypeTuple(new TypeVector(Type.tfloat64.sarrayOf(N)));
     }

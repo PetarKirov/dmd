@@ -131,7 +131,13 @@ subPackage {
     visitor/strict,\
     visitor/transitive,\
   }.d"
+  # NoBackend dispatch never imports the native assemblers. Do not compile
+  # them independently: coverage registration retains their backend references.
+  excludedSourceFiles "compiler/src/dmd/iasm/{dmdx86,dmdaarch64}.d"
+  # The compiler driver installs this preprocessor; library users supply
+  # global.preprocess themselves. Its implementation depends on link.d.
   excludedSourceFiles "compiler/src/dmd/{\
+    cpreprocess,\
     dmsc,\
     eh,\
     link,\

@@ -24,7 +24,6 @@ import dmd.astenums;
 import dmd.cond;
 import dmd.console;
 import dmd.compiler;
-import dmd.cpreprocess;
 import dmd.dmdparams;
 import dmd.dinifile;
 import dmd.dinterpret;

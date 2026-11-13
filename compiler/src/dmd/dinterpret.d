@@ -220,6 +220,76 @@ void dinterpret_init()
     ctfeGlobals = ctfeGlobals.init;
 }
 
+/* ================================================ CTFE debugging support ================================== */
+
+/**
+ Hooks for a debugger that observes and controls compile time function execution
+ (see vdc/dmdserver/ctfedebug.d). The hooks are called on the thread performing
+ the semantic analysis; a hook may block that thread while the debugger inspects
+ the interpreter state.
+ */
+struct CtfeDebugHooks
+{
+    /// Called before the statement `s` is interpreted in the context `istate`.
+    void function(InterState* istate, Statement s) onStatement;
+}
+
+__gshared CtfeDebugHooks ctfeDebugHooks;
+
+/// Install (or clear, by passing null) the statement hook.
+public void setCtfeStatementHook(void function(InterState* istate, Statement s) dg)
+{
+    ctfeDebugHooks.onStatement = dg;
+}
+
+/// Number of CTFE function calls currently active.
+public int ctfeCallDepth()
+{
+    return ctfeGlobals.callDepth;
+}
+
+/// Current top of the CTFE value stack.
+public size_t ctfeStackPointer()
+{
+    return ctfeGlobals.stack.stackPointer();
+}
+
+/// Stack address of the first variable of the innermost CTFE frame.
+public size_t ctfeCurrentFrameBase()
+{
+    return ctfeGlobals.stack.currentFrameBase();
+}
+
+/// For debuggers: the variables stored at the stack addresses [start, end)
+public VarDeclaration[] ctfeVariablesInRange(size_t start, size_t end)
+{
+    return ctfeGlobals.stack.variablesInRange(start, end);
+}
+
+/// For debuggers: the values of the variables stored at [start, end)
+public Expression[] ctfeValuesInRange(size_t start, size_t end)
+{
+    return ctfeGlobals.stack.valuesInRange(start, end);
+}
+
+/// For debuggers: values of the global constants evaluated so far
+public Expression[] ctfeGlobalValues()
+{
+    return ctfeGlobals.stack.globalCtfeValues();
+}
+
+/// For debuggers: the declarations the values from ctfeGlobalValues() belong to
+public VarDeclaration[] ctfeGlobalDeclarations()
+{
+    return ctfeGlobals.stack.globalCtfeDeclarations();
+}
+
+/// For debuggers: the value of 'this' in the innermost CTFE frame
+public Expression ctfeThisValue()
+{
+    return ctfeGlobals.stack.getThis();
+}
+
 /* ================================================ Implementation ======================================= */
 
 private:
@@ -288,6 +358,7 @@ private:
      * have to redo them. This saves a lot of time and memory.
      */
     Expressions globalValues;   // values of global constants
+    VarDeclarations globalDecls; // declarations of the values in globalValues (debugger support)
 
     size_t framepointer;        // current frame pointer
     size_t maxStackPointer;     // most stack we've ever used
@@ -303,6 +374,44 @@ public:
     Expression getThis() @safe
     {
         return localThis;
+    }
+
+    /// For debuggers: stack address of the first variable of the current frame
+    size_t currentFrameBase()
+    {
+        return framepointer;
+    }
+
+    /// For debuggers: the variables stored at the stack addresses [start, end)
+    VarDeclaration[] variablesInRange(size_t start, size_t end)
+    {
+        if (start >= vars.length)
+            return null;
+        if (end > vars.length)
+            end = vars.length;
+        return vars[start .. end];
+    }
+
+    /// For debuggers: the values of the variables stored at [start, end)
+    Expression[] valuesInRange(size_t start, size_t end)
+    {
+        if (start >= values.length)
+            return null;
+        if (end > values.length)
+            end = values.length;
+        return values[start .. end];
+    }
+
+    /// For debuggers: values of the global constants evaluated so far
+    Expression[] globalCtfeValues()
+    {
+        return globalValues[];
+    }
+
+    /// For debuggers: the declarations the values from globalCtfeValues() belong to
+    VarDeclaration[] globalCtfeDeclarations()
+    {
+        return globalDecls[];
     }
 
     // Largest number of stack positions we've used
@@ -407,10 +516,11 @@ public:
         assert(v._init && (v.isConst() || v.isImmutable() || v.storage_class & STC.manifest) && !v.isCTFE());
         v.ctfeAdrOnStack = cast(uint)globalValues.length;
         globalValues.push(copyRegionExp(e));
+        globalDecls.push(v);
     }
 }
 
-private struct InterState
+public struct InterState
 {
     InterState* caller;     // calling function's InterState
     FuncDeclaration fd;     // function being interpreted
@@ -421,6 +531,9 @@ private struct InterState
      * CTFEExp. (null if no label).
      */
     Statement gotoTarget;
+
+    size_t stackBase;       // stack address of first variable of this frame
+    Statement stmt;         // last statement executed in this frame (debugger support)
 }
 
 /*************************************
@@ -598,6 +711,7 @@ private Expression interpretFunction(UnionExp* pue, FuncDeclaration fd, InterSta
     }
 
     ctfeGlobals.stack.startFrame(thisarg);
+    istatex.stackBase = ctfeGlobals.stack.currentFrameBase();
     if (fd.vthis && thisarg)
     {
         ctfeGlobals.stack.push(fd.vthis);
@@ -801,6 +915,9 @@ Expression interpretStatement(Statement s, InterState* istate)
 ///
 Expression interpretStatement(UnionExp* pue, Statement s, InterState* istate)
 {
+    if (ctfeDebugHooks.onStatement)
+        ctfeDebugHooks.onStatement(istate, s);
+
     auto eSink = global.errorSink;
     Expression result;
 

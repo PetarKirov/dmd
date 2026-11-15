@@ -3605,7 +3605,7 @@ private bool evaluateConstraint(TemplateDeclaration td, TemplateInstance ti, Sco
     assert(ti.inst is null);
     ti.inst = ti; // temporary instantiation to enable genIdent()
     bool errors;
-    const bool result = evalStaticCondition(scx, td.constraint, td.lastConstraint, errors, &td.lastConstraintNegs);
+    const bool result = evalStaticCondition(scx, td.constraint, td.lastConstraint, errors, &td.lastConstraintNegs, "template constraint");
     if (result || errors)
     {
         td.lastConstraint = null;

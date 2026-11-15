@@ -48,6 +48,7 @@ import dmd.root.ctfloat;
 import dmd.root.region;
 import dmd.rootobject;
 import dmd.root.utf;
+import dmd.dscope;
 import dmd.statement;
 import dmd.semantic2 : findFunc;
 import dmd.tokens;
@@ -250,6 +251,15 @@ struct CtfeDebugHooks
     /// still on the CTFE stack, so a debugger can report its locals together with
     /// the value that goes back to the caller.
     void function(InterState* istate, Expression result) onReturn;
+
+    /// Called before/after the front end evaluates a static condition at compile
+    /// time: the constraint of a template, the condition of a `static if`, or the
+    /// condition of a `static assert`. Such a condition is evaluated during
+    /// semantic analysis, before any statement of the program runs, so a debugger
+    /// needs to know about it separately. `sc` is the scope the condition is
+    /// evaluated in, `e` the condition expression, and `kind` the construct the
+    /// condition belongs to.
+    void function(Scope* sc, Expression e, const(char)* kind, bool end) onCondition;
 }
 
 __gshared CtfeDebugHooks ctfeDebugHooks;

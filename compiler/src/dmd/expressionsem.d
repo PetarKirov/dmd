@@ -18468,11 +18468,13 @@ Expression toBoolean(Expression exp, Scope* sc)
  *      original = original expression, for error messages
  *      e =  resulting expression
  *      errors = set to `true` if errors occurred
- *      negatives = array to store negative clauses
+*      negatives = array to store negative clauses
+*      kind = the construct the condition belongs to, reported to a debugger
+*             observing the evaluation ("static if", "static assert", ...)
  * Returns:
  *      true if evaluates to true
  */
-bool evalStaticCondition(Scope* sc, Expression original, Expression e, out bool errors, Expressions* negatives = null)
+bool evalStaticCondition(Scope* sc, Expression original, Expression e, out bool errors, Expressions* negatives = null, const(char)* kind = null)
 {
     if (negatives)
         negatives.setDim(0);
@@ -18552,6 +18554,13 @@ bool evalStaticCondition(Scope* sc, Expression original, Expression e, out bool 
             negatives.push(before);
         return opt.get();
     }
+
+    if (ctfeDebugHooks.onCondition)
+        ctfeDebugHooks.onCondition(sc, e, kind, false);
+
+    scope (exit) if (ctfeDebugHooks.onCondition)
+        ctfeDebugHooks.onCondition(sc, e, kind, true);
+
     return impl(e);
 }
 
@@ -19794,7 +19803,7 @@ private extern(C++) class IncludeVisitor : Visitor {
         import dmd.staticcond;
         bool errors;
 
-        bool local_result = evalStaticCondition(sc, sic.exp, sic.exp, errors);
+        bool local_result = evalStaticCondition(sc, sic.exp, sic.exp, errors, null, "static if");
 
         // Prevent repeated condition evaluation.
         // See: fail_compilation/fail7815.d

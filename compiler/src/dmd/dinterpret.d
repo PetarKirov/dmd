@@ -244,6 +244,12 @@ struct CtfeDebugHooks
     /// the interpreter this way, so a debugger can stop at the declaration itself
     /// and step into the function call it contains.
     void function(Expression e, bool end) onConstant;
+
+    /// Called when a call is about to leave the function it was interpreting and
+    /// hand `result` back to its caller. The frame of the returning function is
+    /// still on the CTFE stack, so a debugger can report its locals together with
+    /// the value that goes back to the caller.
+    void function(InterState* istate, Expression result) onReturn;
 }
 
 __gshared CtfeDebugHooks ctfeDebugHooks;
@@ -784,6 +790,9 @@ private Expression interpretFunction(UnionExp* pue, FuncDeclaration fd, InterSta
     }
 
     // Leave the function
+    if (ctfeDebugHooks.onReturn)
+        ctfeDebugHooks.onReturn(&istatex, e);
+
     --ctfeGlobals.callDepth;
 
     ctfeGlobals.stack.endFrame();

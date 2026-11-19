@@ -1491,6 +1491,7 @@ extern (C++) final class TypeFunction : TypeNext
         t.trust = trust;
         t.inferenceArguments = inferenceArguments;
         t.isCtor = isCtor;
+        t.isCtfeOnly = isCtfeOnly;
         return t;
     }
 

@@ -6209,6 +6209,8 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
         }
         auto ale1 = new ArrayLiteralExp(aaExp.loc, keytype.arrayOf(), keys);
         auto ale2 = new ArrayLiteralExp(aaExp.loc, valtype.arrayOf(), values);
+        ale1.onstack = true;
+        ale2.onstack = true;
         lowerArrayLiteral(ale1, sc);
         lowerArrayLiteral(ale2, sc);
         auto arguments = new Expressions(ale1, ale2);
@@ -6318,7 +6320,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
         }
         Type t = cle.type.typeSemantic(cle.loc, sc);
         auto init = initializerSemantic(cle.initializer, sc, t, INITnointerpret, global.errorSink);
-        auto e = initializerToExpression(init, t, sc.inCfile);
+        auto e = initializerToExpression(init, t, sc.inCfile, sc);
         if (!e)
         {
             error(cle.loc, "cannot convert initializer `%s` to expression", toChars(init));
@@ -6609,7 +6611,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
         */
         Expression id = new IdentifierExp(ne.loc, Id.empty);
         id = new DotIdExp(ne.loc, id, makeIdentifierAtLoc(Id.object));
-        auto taa = ne.type.isTypeAArray();
+        auto taa = ne.type.toBasetype().isTypeAArray();
         assert(taa);
         auto tiargs = new Objects(taa.index, taa.next);
         id = new DotTemplateInstanceExp(ne.loc, id, hook, tiargs);
@@ -6949,8 +6951,6 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
                             continue;
                         v.inuse++;
                         v._init = v._init.initializerSemantic(v._scope, v.type, INITinterpret, global.errorSink);
-                        import dmd.semantic2 : lowerStaticAAs;
-                        lowerStaticAAs(v, sc);
                         v.inuse--;
                     }
                 }
@@ -12283,6 +12283,8 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
                     /* Rewrite (a[arguments] = e2) as:
                      *      a.opIndexAssign(e2, arguments)
                      */
+                    ae.e1 = revertModifiableAAIndexReads(ae.e1, sc);
+
                     Expressions* a = ae.arguments.copy();
                     a.insert(0, exp.e2);
                     res = new DotIdExp(exp.loc, ae.e1, makeIdentifierAtLoc(Id.opIndexAssign));
@@ -16843,7 +16845,7 @@ MATCH matchType(FuncExp funcExp, Type to, Scope* sc, FuncExp* presult, ErrorSink
             (*presult).fd.modifyReturns(sc, tof.next);
         }
     }
-    else if (!cast(ErrorSinkNull)eSink)
+    else
     {
         auto ts = toAutoQualChars(tx, to);
         eSink.error(loc, "cannot implicitly convert expression `%s` of type `%s` to `%s`",
@@ -18871,7 +18873,6 @@ void semanticTypeInfo(Scope* sc, Type t)
             if (global.params.useTypeInfo)
             {
                 getTypeInfoType(sd.loc, t, &scx);
-                sd.requestTypeInfo = true;
             }
         }
         else if (!sc.minst)
@@ -18882,7 +18883,6 @@ void semanticTypeInfo(Scope* sc, Type t)
         else
         {
             getTypeInfoType(sd.loc, t, sc);
-            sd.requestTypeInfo = true;
 
             // https://issues.dlang.org/show_bug.cgi?id=15149
             // if the typeid operand type comes from a
@@ -18930,9 +18930,6 @@ void semanticTypeInfo(Scope* sc, Type t)
             }
         }
     }
-
-    /* Note structural similarity of this Type walker to that in isSpeculativeType()
-     */
 
     Type tb = t.toBasetype();
     switch (tb.ty)
@@ -19061,8 +19058,6 @@ Expression getConstInitializer(VarDeclaration vd, bool needFullType = true)
     {
         vd.inuse++;
         vd._init = vd._init.initializerSemantic(vd._scope, vd.type, INITinterpret, global.errorSink);
-        import dmd.semantic2 : lowerStaticAAs;
-        lowerStaticAAs(vd, vd._scope);
         vd._scope = null;
         vd.inuse--;
     }

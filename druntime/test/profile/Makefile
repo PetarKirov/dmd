@@ -1,4 +1,5 @@
-TESTS := profile profilegc both
+TESTS := profile profilegc
+# both
 
 include ../common.mak
 

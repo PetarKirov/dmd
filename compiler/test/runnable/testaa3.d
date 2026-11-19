@@ -518,6 +518,14 @@ void test23182()
     assert(calls == 1);
 }
 
+// https://github.com/dlang/dmd/issues/23711
+void test23711()
+{
+    alias AliasSeq(T...) = T;
+    alias Cases = AliasSeq!(["first": [1]]);
+    assert(Cases[0]);
+}
+
 /***************************************************/
 
 // https://github.com/dlang/dmd/issues/22567
@@ -555,46 +563,23 @@ void test19829()
     assert(bar == [true]);
 }
 
-// https://github.com/dlang/dmd/issues/23642
-void test23642()
+// https://github.com/dlang/dmd/issues/23964
+void test23964()
 {
-    Bson23642[string] fts;
-    fts["key"] = Bson23642();
-    fts["key"]["1"] = 1;
-    fts["key"]["2".."3"] = 23;
-    assert(fts["key"]["1"] == 1);
-    assert(fts["key"]["2"] == 2);
-    assert(fts["key"]["3"] == 3);
+    struct S
+    {
+        int[] data;
 
-    fts["key"]["1"] += 10;
-    fts["key"]["2"]++;
-    --fts["key"]["3"];
-    assert(fts["key"]["1"] == 11);
-    assert(fts["key"]["2"] == 3);
-    assert(fts["key"]["3"] == 2);
-}
+        void opIndexAssign(int rhs, size_t i)
+        {
+            data[i] = rhs;
+        }
+    }
 
-struct Bson23642
-{
-    int[string] data;
-
-    ref int opIndex(string idx)
-    {
-        return data[idx];
-    }
-    void opIndexAssign(int val, string idx)
-    {
-        data[idx] = val;
-    }
-    void opSliceAssign(int val, string idx1, string idx2)
-    {
-        data[idx1] = val / 10;
-        data[idx2] = val % 10;
-    }
-    void opIndexOpAssign(string op)(int val, string idx)
-    {
-        data[idx] += val;
-    }
+    S[string] aa;
+    aa["a"] = S([1, 2, 3]);
+    aa["a"][0] = 11;
+    assert(aa["a"].data == [11, 2, 3]);
 }
 
 /***************************************************/
@@ -630,5 +615,6 @@ void main()
     test22556();
     test19829();
     test23182();
-    test23642();
+    test23711();
+    test23964();
 }

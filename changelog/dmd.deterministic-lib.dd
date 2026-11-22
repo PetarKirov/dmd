@@ -1,0 +1,10 @@
+Libraries built with `-lib` are reproducible
+
+`-lib` used to write the time it ran, and the building user's ids, into the
+header of every member of the library it wrote. Building the same sources
+twice gave two different libraries, so a build system that compares outputs
+or caches by content saw a change where there was none.
+
+Each member header now records a zero time, owner and group, as `llvm-ar`
+writes them by default and `ar D` does. A module the compiler wrote has mode
+`0644`; an object file named on the command line keeps the mode of the file.

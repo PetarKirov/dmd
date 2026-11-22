@@ -272,41 +272,22 @@ final class LibElf : Library
             int i = module_name.toCStringThen!(name => stat(name.ptr, &statbuf));
             if (i == -1) // error, errno is set
                 return corrupt(__LINE__);
-            om.file_time = statbuf.st_ctime;
-            om.user_id = statbuf.st_uid;
-            om.group_id = statbuf.st_gid;
+            // Deterministic, as `llvm-ar` and `ar D` write it: the time and
+            // owner of the file are not part of the library.
+            om.file_time = 0;
+            om.user_id = 0;
+            om.group_id = 0;
             om.file_mode = statbuf.st_mode;
         }
         else
         {
             /* Mock things up for the object module file that never was
-             * actually written out.
+             * actually written out: deterministic, so the library is the
+             * same whoever builds it, whenever.
              */
-            version (Posix)
-            {
-                __gshared uid_t uid;
-                __gshared gid_t gid;
-                __gshared int _init;
-                if (!_init)
-                {
-                    _init = 1;
-                    uid = getuid();
-                    gid = getgid();
-                }
-                om.user_id = uid;
-                om.group_id = gid;
-            }
-            else version (Windows)
-            {
-                om.user_id = 0;  // meaningless on Windows
-                om.group_id = 0; // meaningless on Windows
-            }
-            else
-                static assert(0, "unsupported operating system");
-
-            time_t file_time = 0;
-            time(&file_time);
-            om.file_time = cast(long)file_time;
+            om.user_id = 0;
+            om.group_id = 0;
+            om.file_time = 0;
             om.file_mode = (1 << 15) | (6 << 6) | (4 << 3) | (4 << 0); // 0100644
         }
         objmodules.push(om);
@@ -434,7 +415,7 @@ private:
         om.length = cast(uint)(hoffset - (8 + ElfLibHeader.sizeof));
         om.offset = 8;
         om.name = "";
-        .time(&om.file_time);
+        om.file_time = 0;
         om.user_id = 0;
         om.group_id = 0;
         om.file_mode = 0;

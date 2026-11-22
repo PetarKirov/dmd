@@ -1,0 +1,16 @@
+New option `-ffile-prefix-map=<old>=<new>`
+
+When a path the compiler writes into its output starts with `<old>`, it is
+now written starting with `<new>` instead. This covers `__FILE__`,
+`__FILE_FULL_PATH__`, the file names of failed assertions, bounds errors and
+`-cov`, and debug information, its compilation directory included. The same
+sources then compile to the same object in any directory:
+
+---
+dmd -c -g -ffile-prefix-map=/home/me/project=. /home/me/project/src/app.d
+---
+
+records `./src/app.d`, and `.` as the compilation directory. The files the
+compiler reads and writes, and its diagnostics, are not affected. As in GCC
+and LDC, which have the same option, the prefix matches textually, and the
+mapping given last wins.

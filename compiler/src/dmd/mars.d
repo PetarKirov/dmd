@@ -928,6 +928,16 @@ bool parseCommandLine(const ref Strings arguments, const size_t argc, out Param 
         {
             driverParams.pic = PIC.pie;
         }
+        else if (startsWith(p + 1, "ffile-prefix-map="))
+        {
+            import dmd.common.prefixmap : addFilePrefixMap;
+            enum len = "-ffile-prefix-map=".length;
+            if (!addFilePrefixMap(arg[len .. $]))
+            {
+                error("`-ffile-prefix-map` requires `<old>=<new>`, not `%s`", p + len);
+                return false;
+            }
+        }
         else if (arg == "-ftime-trace")
             params.timeTrace = true;
         else if (startsWith(p + 1, "ftime-trace-granularity="))

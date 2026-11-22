@@ -315,6 +315,15 @@ bool cTypeEquivalence(Type t1, Type t2)
     if (auto te = t1.isTypeEnum())
         return te.sym is t2.isTypeEnum().sym;
 
+    // Before semantic, every mention of a tagged type is its own `TypeTag`:
+    // `extern struct S s;` declared twice names two. The same kind of tag with
+    // the same name, and the same qualifiers, is the same type.
+    if (auto tt = t1.isTypeTag())
+    {
+        auto tt2 = t2.isTypeTag();
+        return tt.id && tt.id is tt2.id && tt.tok == tt2.tok && tt.mod == tt2.mod;
+    }
+
     if (auto tf = t1.isTypeFunction())
         return cFuncEquivalence(tf, tf.isTypeFunction());
 

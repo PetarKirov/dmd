@@ -393,6 +393,18 @@ dmd -cov -unittest myprog.d
             "generate position independent code",
             cast(TargetOS) (TargetOS.all & ~(TargetOS.Windows | TargetOS.OSX))
         ),
+        Option("ffile-prefix-map=<old>=<new>",
+            "map source path prefix <old> to <new> in the compiler's output",
+            "When a path the compiler writes into its output starts with `<old>`, write it
+            starting with `<new>` instead. This covers `__FILE__`, `__FILE_FULL_PATH__`, the
+            file names of failed assertions, bounds errors and `-cov` listings, and debug
+            information, its compilation directory included, so that builds of the same
+            sources in different directories give the same output. Neither the files the
+            compiler reads and writes nor its diagnostics are affected. The prefix matches
+            textually; when several mappings match, the one given last wins.
+            For example, building in `/home/me/project`, `-ffile-prefix-map=/home/me/project=.`
+            records the paths beneath it relative to it."
+        ),
         Option("fPIE",
             "generate position independent executables",
             cast(TargetOS) (TargetOS.all & ~(TargetOS.Windows | TargetOS.OSX))

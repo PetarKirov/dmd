@@ -40,6 +40,7 @@ import dmd.backend.symbol;
 import dmd.backend.ty;
 import dmd.backend.type;
 import dmd.backend.dvarstats;
+import dmd.common.prefixmap : remapFilePrefix;
 import dmd.root.filename : FileName;
 
 
@@ -618,7 +619,7 @@ uint cv8_addfile(const(char)* filename)
 
     // The file names are stored as absolute paths so the debugger can find the
     // source without knowing the compilation directory.
-    const(char)* absname = FileName.toAbsolute(filename);
+    const(char)* absname = remapFilePrefix(FileName.toAbsolute(filename)); // -ffile-prefix-map
     size_t len = strlen(absname);
 
     uint length = cast(uint)F3_buf.length();
@@ -1249,7 +1250,7 @@ idx_t cv8_buildinfo()
     memcpy(tool.ptr + 4, ver.ptr, vn);
     tool[4 + vn] = 0;
 
-    idx_t cwdId  = cv8_string_id(cwd.ptr);
+    idx_t cwdId  = cv8_string_id(remapFilePrefix(cwd.ptr));
     idx_t toolId = cv8_string_id(tool.ptr);
     idx_t srcId  = cv8_string_id("");
     idx_t pdbId  = cv8_string_id("");
@@ -1289,7 +1290,7 @@ idx_t cv8_udt_src_line(idx_t typidx, const(char)* filename, uint line)
      * file list (see cv8_addfile), i.e. as an absolute path, otherwise the
      * debugger cannot associate this record with a known source file.
      */
-    const(char)* srcpath = FileName.toAbsolute(filename);
+    const(char)* srcpath = remapFilePrefix(FileName.toAbsolute(filename));
 
     idx_t srcId = cv8_string_id(srcpath);
     debtyp_t* d = debtyp_alloc(2 + 4 + 4 + 4);

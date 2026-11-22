@@ -21,6 +21,7 @@ import dmd.root.array;
 import dmd.root.file;
 import dmd.root.filename;
 import dmd.common.outbuffer;
+import dmd.common.prefixmap : remapFilePrefix;
 import dmd.root.rmem;
 import dmd.root.string;
 
@@ -1137,7 +1138,7 @@ private void obj_write_deferred(ref OutBuffer objbuf, Library library, ref Dsymb
         const(char)* mname;
         if (m)
         {
-            mname = m.srcfile.toChars();
+            mname = remapFilePrefix(m.srcfile.toChars());
             glue.lastmname = mname;
         }
         else
@@ -1272,7 +1273,7 @@ private void obj_start(ref OutBuffer objbuf, const(char)* srcfile)
     resetCtfeSymbolCache();
     rtlsym_reset();
     clearStringTab();
-    objmod = Obj.initialize(&objbuf, srcfile, null);
+    objmod = Obj.initialize(&objbuf, remapFilePrefix(srcfile), null);
 
     OutBuffer buf;
     buf.write("DMD ");
@@ -1357,7 +1358,7 @@ private void genObjFile(Module m, bool multiobj, bool doppelganger)
     timeTraceBeginEvent(TimeTraceEventType.codegenModule);
     scope(exit) timeTraceEndEvent(TimeTraceEventType.codegenModule, m);
 
-    glue.lastmname = m.srcfile.toChars();
+    glue.lastmname = remapFilePrefix(m.srcfile.toChars());
 
     objmod.initfile(glue.lastmname, null, m.toPrettyChars());
 
@@ -1838,7 +1839,7 @@ private bool entryPointFunctions(Obj objmod, FuncDeclaration fd)
 private elem* toEfilename(Module m)
 {
     //printf("toEfilename(%s)\n", m.toChars());
-    const(char)* id = m.srcfile.toChars();
+    const(char)* id = remapFilePrefix(m.srcfile.toChars());
     size_t len = strlen(id);
 
     auto msfilename = toStringSymbol(id, len, 1);

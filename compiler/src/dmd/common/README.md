@@ -9,5 +9,6 @@
 | [identifiertables.d](https://github.com/dlang/dmd/blob/master/compiler/src/dmd/common/identifiertables.d) | Generated character ranges for identifiers                  |
 | [int128.d](https://github.com/dlang/dmd/blob/master/compiler/src/dmd/common/int128.d)       | 128-bit integer arithmetic                                      |
 | [outbuffer.d](https://github.com/dlang/dmd/blob/master/compiler/src/dmd/common/outbuffer.d) | An expandable buffer in which you can write text or binary data |
+| [prefixmap.d](https://github.com/dlang/dmd/blob/master/compiler/src/dmd/common/prefixmap.d) | Map source path prefixes in what the compiler emits (`-ffile-prefix-map`) |
 | [sha.d](https://github.com/dlang/dmd/blob/master/compiler/src/dmd/common/sha.d)             | Compute SHA-1 and SHA-2 hashes                                  |
 | [smallbuffer.d](https://github.com/dlang/dmd/blob/master/compiler/src/dmd/common/smallbuffer.d) | Temporary buffers and Windows string and path helpers       |

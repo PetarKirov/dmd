@@ -38,6 +38,8 @@ import core.stdc.stdlib;
 import core.stdc.string;
 import core.stdc.errno;
 
+import dmd.common.prefixmap : remapFilePrefix;
+
 import dmd.backend.cc;
 import dmd.backend.cdef;
 import dmd.backend.code;
@@ -1378,7 +1380,7 @@ static if (1)
             debug_info.buf.writeStringz(filename);             // DW_AT_name
 
             char* cwd = getcwd(null, 0);
-            debug_info.buf.writeStringz(cwd);                  // DW_AT_comp_dir as DW_FORM_string
+            debug_info.buf.writeStringz(remapFilePrefix(cwd)); // DW_AT_comp_dir as DW_FORM_string
             free(cwd);
 
             append_addr(debug_info.buf, 0);               // DW_AT_low_pc
@@ -1458,7 +1460,8 @@ static if (1)
     uint dwarf_line_add_directory(const(char)* path)
     {
         assert(path);
-        return addToAAchars(lineDirectories, retrieveDirectory(path));
+        // `-ffile-prefix-map` applies to the tables' keys, as written.
+        return addToAAchars(lineDirectories, retrieveDirectory(remapFilePrefix(path)));
     }
 
     /*************************************
@@ -1467,7 +1470,8 @@ static if (1)
     uint dwarf_line_addfile(const(char)* path)
     {
         assert(path);
-        return addToAAchars(infoFileName_table, path[0 .. strlen(path)]);
+        const mapped = remapFilePrefix(path);
+        return addToAAchars(infoFileName_table, mapped[0 .. strlen(mapped)]);
     }
 
     /*************************************
@@ -1617,7 +1621,7 @@ static if (1)
                         foreach (const(char)[] dir; dirkeys)
                         {
                             // Directories must be written in the correct order, to match file_name indexes
-                            if (dwarf_line_add_directory(dir.ptr) == id)
+                            if (addToAAchars(lineDirectories, dir) == id)
                             {
                                 //printf("%d: %s\n", dwarf_line_add_directory(dir), dir);
                                 debug_line.buf.writeStringz(dir);
@@ -1662,11 +1666,11 @@ static if (1)
                         foreach (const(char)[] filename; filekeys)
                         {
                             // Filenames must be written in the correct order, to match the AAchars' idx order
-                            if (id == dwarf_line_addfile(filename.ptr))
+                            if (id == addToAAchars(infoFileName_table, filename))
                             {
                                 debug_line.buf.writeStringz(filename.ptr.filespecname);
 
-                                auto index = dwarf_line_add_directory(filename.ptr);
+                                auto index = addToAAchars(lineDirectories, retrieveDirectory(filename.ptr));
                                 assert(index != 0);
                                 if (config.dwarf >= 5)
                                     --index; // Minus 1 because it must be an index, not a element number

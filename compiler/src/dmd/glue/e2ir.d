@@ -16,6 +16,7 @@ import core.stdc.stddef;
 import core.stdc.string;
 import core.stdc.time;
 
+import dmd.common.prefixmap : remapFilePrefix;
 import dmd.root.array;
 import dmd.root.ctfloat;
 import dmd.root.rmem;
@@ -667,7 +668,7 @@ Symbol* toExtSymbol(Dsymbol s)
 elem* toEfilenamePtr(Module m)
 {
     //printf("toEfilenamePtr(%s)\n", m.toChars());
-    const(char)* id = m.srcfile.toChars();
+    const(char)* id = remapFilePrefix(m.srcfile.toChars());
     size_t len = strlen(id);
     Symbol* s = toStringSymbol(id, len, 1);
     return el_ptr(s);
@@ -1736,7 +1737,7 @@ elem* toElem(Expression e, ref IRState irs)
         elem* ea;
         if (ae.loc.filename && (ae.msg || strcmp(ae.loc.filename, mname) != 0))
         {
-            const(char)* id = ae.loc.filename;
+            const(char)* id = remapFilePrefix(ae.loc.filename);
             size_t len = strlen(id);
             Symbol* si = toStringSymbol(id, len, 1);
             elem* efilename = el_pair(TYdarray, el_long(TYsize_t, len), el_ptr(si));
@@ -7416,7 +7417,7 @@ elem* appendDtors(ref IRState irs, elem* er, size_t starti, size_t endi)
 
 elem* filelinefunction(ref IRState irs, Loc loc)
 {
-    const(char)* id = loc.filename;
+    const(char)* id = remapFilePrefix(loc.filename);
     size_t len = strlen(id);
     Symbol* si = toStringSymbol(id, len, 1);
     elem* efilename = el_pair(TYdarray, el_long(TYsize_t, len), el_ptr(si));
@@ -7547,7 +7548,7 @@ elem* locToFileElem(const ref IRState irs, Loc loc)
 {
     elem* efile;
 
-    if (auto fname = loc.filename)
+    if (auto fname = remapFilePrefix(loc.filename))
     {
         const len = strlen(fname);
         Symbol* s = toStringSymbol(fname, len, 1);
@@ -7596,7 +7597,7 @@ elem* callCAssert(ref IRState irs, Loc loc, Expression exp, Expression emsg, con
     elem* efilename;
     if (loc.filename && strcmp(loc.filename, mname) != 0)
     {
-        const(char)* id = loc.filename;
+        const(char)* id = remapFilePrefix(loc.filename);
         size_t len = strlen(id);
         Symbol* si = toStringSymbol(id, len, 1);
         efilename = el_ptr(si);

@@ -77,6 +77,7 @@ import dmd.root.ctfloat;
 import dmd.root.filename;
 import dmd.root.optional;
 import dmd.common.outbuffer;
+import dmd.common.prefixmap : remapFilePrefix;
 import dmd.rootobject;
 import dmd.root.string;
 import dmd.root.utf;
@@ -15874,6 +15875,8 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
                     s = FileName.toAbsolute(loc.isValid() ? loc.filename : sc._module.srcfile.toChars());
                 else
                     s = loc.isValid() ? loc.filename : sc._module.ident.toErrMsg();
+                // As emitted: `-ffile-prefix-map` applies.
+                s = remapFilePrefix(s);
                 result = new StringExp(loc, s.toDString()).expressionSemantic(sc);
                 break;
             }

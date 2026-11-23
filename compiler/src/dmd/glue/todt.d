@@ -1480,6 +1480,34 @@ private extern (C++) class TypeInfoDtVisitor : Visitor
             semanticTypeInfoMembers(sd);
         }
 
+        /* An instantiated struct whose codegen is elided here (another
+         * module's instantiation is expected to provide it) still gets its
+         * TypeInfo here, and the TypeInfo points at these functions. That
+         * other object file need not exist: under `-allinst` only root
+         * modules' instantiations are emitted, and an instance analyzed
+         * through a non-root module (its unittests, say, found by
+         * `__traits(getUnitTests)`) has none. So put them out along with the
+         * TypeInfo, as COMDATs, as the struct's own codegen does.
+         */
+        if (TemplateInstance ti = sd.isInstantiated())
+        {
+            if (!ti.needsCodegen())
+            {
+                if (sd.xeq && sd.xeq != StructDeclaration.xerreq)
+                    toObjFile(sd.xeq, global.params.multiobj);
+                if (sd.xcmp && sd.xcmp != StructDeclaration.xerrcmp)
+                    toObjFile(sd.xcmp, global.params.multiobj);
+                if (FuncDeclaration ftostr = search_toString(sd))
+                    toObjFile(ftostr, global.params.multiobj);
+                if (sd.xhash)
+                    toObjFile(sd.xhash, global.params.multiobj);
+                if (sd.postblit)
+                    toObjFile(sd.postblit, global.params.multiobj);
+                if (sd.dtor)
+                    toObjFile(sd.dtor, global.params.multiobj);
+            }
+        }
+
         /* Put out:
          *  char[] mangledName;
          *  void[] init;

@@ -2710,6 +2710,25 @@ private extern (C++) final class ImportCInlineUsageVisitor : SemanticTimeTransit
             mark(se.var);
     }
 
+    // An alias to a named function only names it: the function's body is
+    // walked where it is declared (a module member, or a nested function's
+    // own declaration), and every use through the alias is a VarExp or a
+    // call, which marks it. Walking into the body here again recursed
+    // without end when the body aliases itself (`alias self = f;` in `f`)
+    // or its caller. A function literal has no declaration elsewhere.
+    override void visit(AliasDeclaration d)
+    {
+        if (auto fd = d.aliassym ? d.aliassym.isFuncDeclaration() : null)
+        {
+            if (!fd.isFuncLiteralDeclaration())
+            {
+                mark(fd);
+                return;
+            }
+        }
+        super.visit(d);
+    }
+
     // A direct call's resolved callee is CallExp.f, set independently of
     // e1 once semantic analysis devirtualizes/resolves the call - e1 alone
     // (what the base Expression traversal above sees) cannot be relied on

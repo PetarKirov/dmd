@@ -4420,6 +4420,14 @@ private bool functionParameters(Loc loc, Scope* sc,
                 Scope* sc2 = sc.push();
                 sc2.callLoc = loc;
                 arg = arg.expressionSemantic(sc2);
+                // The default argument was analyzed with the declaration,
+                // explicit casts included; a cast that only repaints the type
+                // (`cast(E) g()` with `E` based on `g`'s return type) leaves
+                // no CastExp for the copy to repeat. Convert the copy as the
+                // declaration's analysis did.
+                if (p.defaultArg.type && arg.type && !arg.type.equals(p.defaultArg.type)
+                    && !arg.isErrorExp())
+                    arg = arg.castTo(sc2, p.defaultArg.type);
                 sc2.pop();
             }
             arg.loc = loc; // update loc for debug info

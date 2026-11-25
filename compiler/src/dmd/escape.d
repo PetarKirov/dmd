@@ -445,6 +445,47 @@ bool checkParamArgumentEscape(ref Scope sc, FuncDeclaration fdc, Identifier parI
 }
 
 /*****************************************************
+ * The delegates of lazy variadic array `e` are copied to where `scope` does
+ * not cover them: into a typesafe variadic parameter `parId` (whose implicit
+ * `scope` covers only the array), into allocated memory (`parId` is null), or
+ * into the memory of another array (`parId` is that array's expression).
+ * Check that `e` holds no delegates that are `scope`.
+ * Params:
+ *      sc = used to determine current function and module
+ *      e = the array whose delegates are copied
+ *      parId = where they are copied to
+ *      gag = do not print error messages
+ * Returns:
+ *      `true` if pointers to the stack can escape
+ */
+public
+bool checkLazyArrayElementsEscape(ref Scope sc, Expression e, RootObject parId, bool gag)
+{
+    bool result = false;
+    void onValue(VarDeclaration v)
+    {
+        if (!v.scopeCoversDelegates())
+            doNotInferScope(v, e);
+        else if (!parId)
+            result |= sc.setUnsafeDIP1000(gag, e.loc,
+                "copying the `scope` delegates of `%s` into allocated memory", v);
+        else if (parId.dyncast() == DYNCAST.identifier)
+            result |= sc.setUnsafeDIP1000(gag, e.loc,
+                "assigning the `scope` delegates of `%s` to non-scope variadic parameter `%s`", v, parId);
+        else
+            result |= sc.setUnsafeDIP1000(gag, e.loc,
+                "copying the `scope` delegates of `%s` into non-scope `%s`", v, parId);
+    }
+    void onRef(VarDeclaration, bool) {}
+    void onFunc(FuncDeclaration, bool) {}
+    void onExp(Expression, bool) {}
+
+    scope EscapeByResults er = EscapeByResults(&onRef, &onValue, &onFunc, &onExp);
+    escapeByValue(e, er);
+    return result;
+}
+
+/*****************************************************
  * Function argument initializes a `return` parameter,
  * and that parameter gets assigned to `firstArg`.
  * Essentially, treat as `firstArg = arg;`
@@ -625,14 +666,12 @@ bool checkAssignEscape(ref Scope sc, Expression e, bool gag, bool byRef)
     if (e1.isSliceExp())
     {
         // slice-copy is not assigning a pointer, but copying array content
-        if (va)
+        if (!va || !va.type.toBasetype().isTypeSArray() || // treat static array slice same as a variable
+            !va.type.hasPointers())
         {
-            if (!va.type.toBasetype().isTypeSArray() || // treat static array slice same as a variable
-                !va.type.hasPointers())
-                return false;
+            // ...but the content of a lazy array is its delegates
+            return e2.type.isLazyArray() && checkLazyArrayElementsEscape(sc, e2, e1, gag);
         }
-        else
-            return false;
     }
 
     if (va && e.op == EXP.concatenateElemAssign)
@@ -1483,6 +1522,50 @@ void escapeByValue(Expression e, ref scope EscapeByResults er)
     escapeExp(e, er, 0);
 }
 
+/***********************************
+ * Does `v`'s `scope` cover the delegates of the lazy variadic array it holds?
+ *
+ * `scope` on an array of delegates with no parameters means its delegates do
+ * not escape either, which lets a caller keep the frames they close over on its
+ * stack (see `functionParameters`):
+ * https://dlang.org/spec/function.html#lazy_variadic_functions
+ * The `scope` a typesafe variadic parameter gets implicitly covers only the
+ * array, which the caller builds on its stack; the delegates may escape.
+ * Params:
+ *      v = variable holding the array
+ * Returns:
+ *      true if the delegates are `scope`
+ */
+bool scopeCoversDelegates(VarDeclaration v)
+{
+    return v.isScope() &&
+        (v.storage_class & (STC.variadic | STC.scopeinferred)) != (STC.variadic | STC.scopeinferred);
+}
+
+/* An element of a lazy variadic array of delegates escapes. Report an array
+ * whose `scope` covers its delegates as escaping by value, and keep `scope`
+ * from being inferred for any other.
+ * Params:
+ *      e1 = the array the element comes from
+ *      er = where to place collected data
+ */
+private void escapeLazyArrayElement(Expression e1, ref scope EscapeByResults er)
+{
+    void onValue(VarDeclaration v)
+    {
+        if (v.scopeCoversDelegates())
+            er.byValue(v);
+        else
+            doNotInferScope(v, e1);
+    }
+    void onRef(VarDeclaration, bool) {}
+    void onFunc(FuncDeclaration, bool) {}
+    void onExp(Expression, bool) {}
+
+    scope EscapeByResults ler = EscapeByResults(&onRef, &onValue, &onFunc, &onExp);
+    escapeExp(e1, ler, 0);
+}
+
 // Unified implementation of `escapeByValue` and `escapeByRef`
 // deref = derference level, if `p` has deref 0, then `*p` has deref 1, `&p` has -1, and `**p` has 2 etc.
 // For escapeByValue, deref = 0
@@ -1683,6 +1766,8 @@ void escapeExp(Expression e, ref scope EscapeByResults er, int deref)
         else if (tb.isTypeDArray())
         {
             escapeExp(e.e1, er, deref + 1);
+            if (deref == 0 && !er.live && tb.isLazyArray())
+                escapeLazyArrayElement(e.e1, er);
         }
     }
 

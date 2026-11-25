@@ -185,7 +185,13 @@ AggregateDeclaration isAggregate(Type t)
  */
 Type isLazyArray(Parameter _this)
 {
-    Type tb = _this.type.toBasetype();
+    return _this.type.isLazyArray();
+}
+
+/// ditto
+Type isLazyArray(Type _this)
+{
+    Type tb = _this.toBasetype();
     if (tb.isStaticOrDynamicArray())
     {
         Type tel = (cast(TypeArray)tb).next.toBasetype();
@@ -4079,9 +4085,11 @@ Type typeSemantic(Type type, Loc loc, Scope* sc)
                         t.isTypeClass().sym.ident.toErrMsg(), fparam.toChars());
                 }
 
-                if (isStackAllocatedVariadic)
+                if (isStackAllocatedVariadic && !(fparam.storageClass & STC.scope_))
                 {
-                    /* typesafe variadic arguments are constructed on the stack, so must be `scope`
+                    /* typesafe variadic arguments are constructed on the stack, so must be `scope`.
+                     * A declared `scope` stays declared: for an array of delegates
+                     * it also covers the delegates (see `escapeLazyArrayElement`).
                      */
                     fparam.storageClass |= STC.scope_ | STC.scopeinferred;
                 }
@@ -8135,6 +8143,14 @@ Covariant covariant(Type src, Type t, STC* pstc = null, bool cppCovariant = fals
             }
         Lcov:
             notcovariant |= !fparam1.isCovariant(t1.isRef, fparam2);
+
+            /* The implicit `scope` of a typesafe variadic array does not
+             * cover its delegates, a declared one does (`scopeCoversDelegates`)
+             */
+            if (t1.parameterList.varargs == VarArg.typesafe && i + 1 == t1.parameterList.length &&
+                fparam1.isLazyArray() && (fparam1.storageClass & STC.scopeinferred) &&
+                (fparam2.storageClass & (STC.scope_ | STC.scopeinferred)) == STC.scope_)
+                notcovariant = true;
 
             /* https://issues.dlang.org/show_bug.cgi?id=23135
              * extern(C++) mutable parameters are not covariant with const.

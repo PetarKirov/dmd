@@ -501,6 +501,9 @@ private extern(C++) final class Semantic3Visitor : Visitor
                     }
 
                     stc |= fparam.storageClass & (STC.IOR | STC.return_ | STC.scope_ | STC.lazy_ | STC.final_ | STC.TYPECTOR | STC.nodtor | STC.returnScope | STC.register);
+                    // tell a typesafe variadic array's implicit `scope` from a declared one
+                    if (stc & STC.variadic)
+                        stc |= fparam.storageClass & STC.scopeinferred;
                     v.storage_class = stc;
                     v.dsymbolSemantic(sc2);
                     if (!sc2.insert(v))

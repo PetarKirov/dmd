@@ -1,8 +1,5 @@
 // https://github.com/dlang/dmd/issues/22885
 // REQUIRED_ARGS: -preview=dip1000
-// PERMUTE_ARGS: -O -g
-// Not -inline: inlining `() => T(1).get` reads the temporary after its
-// destructor ran, with or without lazy arguments (a separate bug).
 
 /* The arguments of a lazy variadic function whose array of delegates is
  * declared `scope` are evaluated in place, on the caller's stack: the

@@ -346,11 +346,12 @@ void toTraceGC(ref IRState irs, elem* e, Loc loc)
  *      e = Expression to convert
  *      irs = context
  *      ehidden = lvalue element to place the value, if any
+ *      lvalue = the caller needs `e` as an lvalue (a `ref` return), not its value
  * Returns:
  *      generated elem tree
  */
 package(dmd.glue)
-elem* toElemDtor(Expression e, ref IRState irs, elem* ehidden = null)
+elem* toElemDtor(Expression e, ref IRState irs, elem* ehidden = null, bool lvalue = false)
 {
     //printf("Expression.toElemDtor() %s\n", e.toChars());
 
@@ -389,7 +390,7 @@ elem* toElemDtor(Expression e, ref IRState irs, elem* ehidden = null)
     irs.mayThrow = mayThrowSave;
 
     // Add destructors
-    elem* ex = appendDtors(irs, er, starti, endi);
+    elem* ex = appendDtors(irs, er, starti, endi, lvalue || ehidden);
     return ex;
 }
 
@@ -7327,11 +7328,12 @@ elem* toElemStructLit(StructLiteralExp sle, ref IRState irs, EXP op, Symbol* sym
  *      er = elem to append destructors to
  *      starti = starting index in varsInScope[]
  *      endi = ending index in varsInScope[]
+ *      lvalue = preserve `er` as an lvalue rather than its value
  * Returns:
  *      er with destructors appended
  */
 
-elem* appendDtors(ref IRState irs, elem* er, size_t starti, size_t endi)
+elem* appendDtors(ref IRState irs, elem* er, size_t starti, size_t endi, bool lvalue)
 {
     //printf("appendDtors(%d .. %d)\n", cast(int)starti, cast(int)endi);
 
@@ -7382,9 +7384,11 @@ elem* appendDtors(ref IRState irs, elem* er, size_t starti, size_t endi)
     {
         *pe = el_combine(edtors, erx);
     }
-    else if (elemIsLvalue(erx))
+    else if (lvalue && elemIsLvalue(erx))
     {
-        /* Lvalue, take a pointer to it
+        /* Lvalue, take a pointer to it. Only a caller that needs the lvalue
+         * gets it: when `erx` is part of a temporary being destroyed, such as
+         * `T(9).field`, reading it after the destructors reads destroyed data.
          */
         elem* ep = el_una(OPaddr, TYnptr, erx);
         elem* e = el_same(ep);

@@ -623,7 +623,7 @@ void Statement_toIR(Statement s, ref IRState irs, StmtState* stmtstate)
         else if (tf.isRef)
         {
             // Reference return, so convert to a pointer
-            e = toElemDtor(s.exp, irs);
+            e = toElemDtor(s.exp, irs, null, true);
             e = addressElem(e, s.exp.type.pointerTo());
         }
         else

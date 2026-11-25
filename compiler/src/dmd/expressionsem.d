@@ -4730,6 +4730,12 @@ private bool functionParameters(Loc loc, Scope* sc,
                  */
                 VarDeclaration vPar = fd ? (fd.parameters ? (*fd.parameters)[i] : null) : null;
                 err |= checkParamArgumentEscape(*sc, fd, p.ident, vPar, cast(STC) pStc, arg, false, false);
+
+                // The implicit `scope` of a typesafe variadic array does not
+                // cover its delegates
+                if (tf.parameterList.varargs == VarArg.typesafe && i + 1 == nparams &&
+                    (p.storageClass & STC.scopeinferred) && p.isLazyArray())
+                    err |= checkLazyArrayElementsEscape(*sc, arg, p.ident, false);
             }
 
             // Turning heap allocations into stack allocations is dangerous without dip1000, since `scope` inference
@@ -4746,6 +4752,25 @@ private bool functionParameters(Loc loc, Scope* sc,
                 Expression a = arg;
                 if (auto ce = a.isCastExp())
                     a = ce.e1;
+
+                /* A lazy variadic argument is a slice of an array literal of
+                 * delegate literals, one per argument. A declared `scope` on
+                 * the array covers its delegates (`scopeCoversDelegates`), so
+                 * they need no closure. The implicit `scope` of a typesafe
+                 * variadic array does not.
+                 * https://dlang.org/spec/function.html#lazy_variadic_functions
+                 */
+                if (p.isLazyArray() && (p.storageClass & (STC.scope_ | STC.scopeinferred)) == STC.scope_)
+                {
+                    Expression inner = a;
+                    if (auto se = inner.isSliceExp())
+                        inner = se.e1;
+                    if (auto lazyAle = inner.isArrayLiteralExp())
+                        foreach (el; *lazyAle.elements)
+                            if (el)
+                                if (auto fe = el.isFuncExp())
+                                    fe.fd.tookAddressOf = 0;
+                }
 
                 ArrayLiteralExp ale;
                 if (p.type.toBasetype().ty == Tarray &&
@@ -13779,6 +13804,9 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             if (tb1next.checkPostblit(exp.e1.loc, sc))
                 return setError();
 
+            if (tb2.isLazyArray() && checkLazyArrayElementsEscape(*sc, exp.e2, null, false))
+                return setError();
+
             exp.e2 = exp.e2.castTo(sc, exp.e1.type);
         }
         else if ((tb1.ty == Tarray) && exp.e2.implicitConvTo(tb1next))
@@ -14291,6 +14319,12 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
 
         auto f1 = checkNonAssignmentArrayOp(exp.e1);
         auto f2 = checkNonAssignmentArrayOp(exp.e2);
+        if (f1 || f2)
+            return setError();
+
+        // The delegates of a lazy array operand are copied into allocated memory
+        f1 = tb1.isLazyArray() && checkLazyArrayElementsEscape(*sc, exp.e1, null, false);
+        f2 = tb2.isLazyArray() && checkLazyArrayElementsEscape(*sc, exp.e2, null, false);
         if (f1 || f2)
             return setError();
 

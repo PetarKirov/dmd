@@ -1,0 +1,30 @@
+A `scope` lazy variadic array keeps its arguments' frames on the stack
+
+The arguments of a $(LINK2 $(ROOT_DIR)spec/function.html#lazy_variadic_functions,
+lazy variadic function) are delegates. When the array of delegates is declared
+`scope`, the caller no longer allocates a GC closure for the variables they
+read, so such calls work in `@nogc` code and with `-betterC`:
+
+---
+int sum(scope int delegate() @nogc[] xs...) @nogc
+{
+    int s;
+    foreach (x; xs)
+        s += x();
+    return s;
+}
+
+int g(int a, int b) @nogc => sum(a, b + 1); // previously: allocates closure for `g()`
+---
+
+A declared `scope` on such an array now covers its delegates too, and with
+`-preview=dip1000` a `@safe` function may not let them escape: storing an
+element (`global = xs[0]`), returning one, appending the array to another
+(`arr ~= xs`, `xs ~ ys`, `arr[] = xs[]`), or passing the array to a typesafe
+variadic parameter that is not declared `scope` are errors. An override may not
+drop the `scope`.
+
+The `scope` every typesafe variadic array gets implicitly covers only the
+array, as before: without a declared `scope`, the delegates may escape and the
+caller allocates a closure. A declared `scope` on a typesafe variadic parameter
+is part of the function's mangled name again, as it was before 2.101.

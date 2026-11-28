@@ -332,6 +332,16 @@ elem* evalu8(elem* e, Goal goal)
     else
         return e;
 
+    /* The result is written into `e` itself, whose constant shares its union with
+     * the E1 and E2 pointers. Most cases write only the field their operation
+     * computes (`Vint` for a `ubyte` result, `Vlong` for a 32 bit one), so clear
+     * the union first: otherwise the untouched bytes keep part of E1's address,
+     * and code reading the constant at its full width (a pushed argument) emits
+     * those bytes, making the object file differ from one run to the next.
+     * A path that does not fold restores the node, at Lnofold.
+     */
+    e.EV = Vconst.init;
+
     /* if left or right leaf is unsigned, this is an unsigned operation */
     uns = tyuns(tym) | tyuns(tym2);
 
@@ -898,7 +908,7 @@ static if (0)
                     break;
                 default:
                     debug printf("tym = x%x\n",tym);
-                    debug elem_print(e);
+                    debug elem_print(&esave);
                     assert(0);
             }
         }
@@ -1096,7 +1106,7 @@ static if (0)
             {
                 div0:
                 overflow:
-                    return e; // don't error or const fold, it might be on a branch never taken
+                    goto Lnofold; // don't error or const fold, it might be on a branch never taken
             }
         }
         if (uns)
@@ -1313,7 +1323,7 @@ static if (0)
                 break;
 
             case -1:            // can happen for TYstruct
-                return e;       // don't const fold it
+                goto Lnofold;   // don't const fold it
 
             default:
                 if (tyfloating(tym))
@@ -1323,7 +1333,7 @@ static if (0)
                 }
                 else
                 {
-                    elem_print(e);
+                    elem_print(&esave);
                     assert(0);
                 }
                 break;
@@ -1456,7 +1466,7 @@ else
     case OPcos:
     case OPrndtol:
     case OPrint:
-        return e;
+        goto Lnofold;
 
     case OPngt:
     case OPgt:
@@ -1838,10 +1848,10 @@ static if (0) // && MARS
         if (l1 >= 0 && l1 < 4096)
         {
             error(e.Esrcpos, "dereference of null pointer");
-            e.E1.Vlong = 4096;     // suppress redundant messages
+            e1.Vlong = 4096;     // suppress redundant messages
         }
 }
-        return e;
+        goto Lnofold;
 
     case OPvecfill:
         switch (tybasic(e.Ety))
@@ -1912,7 +1922,7 @@ static if (0) // && MARS
         break;
 
     default:
-        return e;
+        goto Lnofold;
   }
 
     if (!(goal & Goal.ignoreExceptions) &&
@@ -1921,8 +1931,7 @@ static if (0) // && MARS
        )
     {
         // Exceptions happened. Do not fold the constants.
-        *e = esave;
-        return e;
+        goto Lnofold;
     }
     else
     {
@@ -1937,6 +1946,10 @@ static if (0) // && MARS
   assert((statusFE() & 0x3800) == 0);
   //printf("evalu8() returns: "); elem_print(e);
   return e;
+
+Lnofold:
+    *e = esave;
+    return e;
 }
 
 /******************************

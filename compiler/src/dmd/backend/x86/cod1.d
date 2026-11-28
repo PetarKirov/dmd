@@ -4319,6 +4319,40 @@ targ_size_t paramsize(elem* e, tym_t tyf)
 }
 
 /***************************
+ * Get constant argument e as the bytes of its stack slot: only its own
+ * bytes, as the rest of e.EV may be stale, laid out as el_convfloat() does.
+ * An integer is extended by its type, and on x86-64 one of up to 4 bytes
+ * is sign extended from 32 bits: the slot's upper half is unspecified, and
+ * that keeps it an immediate.
+ */
+@trusted
+private Vconst paramConst(elem* e, targ_size_t szb)
+{
+    assert(e.Eoper == OPconst);
+    const tym = tybasic(e.Ety);
+    Vconst v;
+    if ((tyintegral(tym) || typtr(tym)) && szb <= 4)
+    {
+        v.Vllong = el_tolong(e);
+        if (I64)
+            v.Vllong = cast(int) v.Vllong;
+    }
+    else if (tym == TYreal || tym == TYireal)
+        memcpy(&v, &e.Vreal, 10);
+    else if (tym == TYcreal)
+    {
+        memcpy(&v, &e.Vcreal.re, 10);
+        memcpy(cast(ubyte*) &v + tysize(TYreal), &e.Vcreal.im, 10);
+    }
+    else
+    {
+        assert(szb <= v.sizeof);
+        memcpy(&v, &e.EV, szb);
+    }
+    return v;
+}
+
+/***************************
  * Generate code to move argument e on the stack.
  */
 
@@ -4386,7 +4420,8 @@ private void movParams(ref CGstate cg, ref CodeBuilder cdb, elem* e, uint stacka
                 cs.IFL1 = FL.funcarg;
                 cs.IEV1.Voffset = funcargtos - sz;
                 cs.IFL2 = FL.const_;
-                targ_size_t* p = cast(targ_size_t*) &(e.EV);
+                Vconst[2] v = [paramConst(e, szb), Vconst.init]; // the loop reads 8 bytes a word ahead
+                targ_size_t* p = cast(targ_size_t*) v.ptr;
                 cs.IEV2.Vsize_t = *p;
                 if (I64 && tym == TYcreal)
                     // The alignment of EV.Vcreal is not the same on the compiler
@@ -4406,7 +4441,7 @@ private void movParams(ref CGstate cg, ref CodeBuilder cdb, elem* e, uint stacka
                         p = cast(targ_size_t*)(cast(char*) p + REGSIZE);
                         i -= REGSIZE;
                     } while (i > 0);
-                    p = cast(targ_size_t*) &(e.EV);
+                    p = cast(targ_size_t*) v.ptr;
                 }
 
                 int i = cast(int)sz;
@@ -4996,7 +5031,8 @@ void pushParams(ref CGstate cg, ref CodeBuilder cdb, elem* e, uint stackalign, t
 
             cg.stackpush += sz;
             cdb.genadjesp(cast(int)sz);
-            targ_uns* pi = &e.Vuns;     // point to start of Vdouble
+            Vconst v = paramConst(e, szb);
+            targ_uns* pi = &v.Vuns;     // point to start of Vdouble
             targ_ushort* ps = cast(targ_ushort*) pi;
             targ_ullong* pl = cast(targ_ullong*)pi;
             i /= regsize;

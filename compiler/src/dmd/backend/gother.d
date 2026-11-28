@@ -734,6 +734,7 @@ private void eqeqranges(ref Elemdatas eqeqlist)
             //printf("replacing with %d\n",result);
             el_free(e.E1);
             el_free(e.E2);
+            e.EV = Vconst.init; // the freed E1 and E2 share the constant's bytes
             e.Vint = (e.Eoper == OPeqeq) ? result : result ^ 1;
             e.Eoper = OPconst;
         }

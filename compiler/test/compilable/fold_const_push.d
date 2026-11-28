@@ -18,6 +18,36 @@ $r:[^\n]*$
 $r:[^\n]*$
 $r:[^\n]*$
 $r:[^\n]*$
+_D15fold_const_push7testNegFS7imports17fold_const_push_a1EZv:
+$r:[^\n]*$
+$r:[^\n]*$
+0004:   6A FF                    push      0FFFFFFFFh
+0006:   FF 75 10                 push      dword ptr 010h[RBP]
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+_D15fold_const_push7testComFS7imports17fold_const_push_a1EZv:
+$r:[^\n]*$
+$r:[^\n]*$
+0004:   6A FF                    push      0FFFFFFFFh
+0006:   FF 75 10                 push      dword ptr 010h[RBP]
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
+$r:[^\n]*$
 ---
 */
 
@@ -31,3 +61,13 @@ $r:[^\n]*$
 import imports.fold_const_push_a;
 
 void test(E e) { mid(3, e); }
+
+// The widening of -1 writes only `Vint`, so the upper bytes are not its sign:
+// the push reads the int, not 8 bytes (`mov EAX,0FFFFFFFFh` `push RAX`).
+
+void testNeg(E e) { midByte(-1, e); }
+
+// `~0u` folds to all 64 bits set: a 4 byte argument is pushed from its own
+// bytes, sign extended, so it stays `push -1`.
+
+void testCom(E e) { midCom(0, e); }
